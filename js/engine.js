@@ -20,6 +20,8 @@ export const CBT_BEFORE_WAKE = 3; // hours
 // arrival-day light lands just before the body-temperature low and the clock tends to shift later instead
 // (Burgess 2011 jet-lag protocol; AASM review, Sack et al. 2007), so the plan goes that way.
 export const LONG_WAY_THRESHOLD = 9;
+// Melatonin evidence is for trips across 5 or more time zones (Cochrane review).
+export const MELATONIN_MIN_ZONES = 5;
 const SLOT = 15 * MIN;
 const MAX_POST_DAYS = 14;
 
@@ -304,31 +306,21 @@ function buildLeg(o) {
   avoid.forEach((w) => annotateLight(w, 'avoid'));
 
   // ---- Melatonin & caffeine --------------------------------------------------
-  // Eastward (advance): optional dose 30–60 min before local bedtime from the night you arrive, for up to
-  // 5 nights or until adjusted (Cochrane review: bedtime at destination on arrival day and the next 2–5 days;
-  // no benefit shown from taking it before departure). Skipped if the body clock would read 00:00–05:00,
-  // when melatonin is least effective (CDC).
-  // Westward (delay) of 5 h or more: no bedtime dose (bedtime melatonin could work against a delay, AASM
-  // review), but an optional low dose if you wake in the second half of the night, when the body clock
-  // reads "morning" and melatonin shifts it later (CDC; Roach & Sargent 2019).
+  // Only for eastward (advance) trips across 5+ time zones, where the evidence is (Cochrane review):
+  // an optional dose 30–60 min before local bedtime from the night you arrive, for up to 5 nights or until
+  // adjusted (bedtime at destination on arrival day and the next 2–5 days; no benefit shown before
+  // departure). Skipped if the body clock would read 00:00–05:00, when it is least effective (CDC).
+  // Westward trips get none: bedtime melatonin can work against shifting later (AASM review), and
+  // night-time dosing to shift later is untested in jet lag trials.
   const mel = [];
-  const nightMel = [];
   const destSleeps = sleeps.filter((x) => x.place === 'dest');
   const stillShifting = (x) => adjustedAt == null || x.start < adjustedAt + 12 * HOUR;
-  if (melatonin && strategy !== 'home' && dir === 'advance') {
+  if (melatonin && strategy !== 'home' && dir === 'advance' && Math.abs(diff) >= MELATONIN_MIN_ZONES) {
     for (const x of destSleeps.filter(stillShifting).slice(0, 5)) {
       const at = x.start - 45 * MIN;
       const bodyHour = mod(at / HOUR + bodyStart + phiAtRaw(at), 24);
       if (bodyHour < 5) continue;
       mel.push({ at, bed: x.start });
-    }
-  }
-  if (melatonin && strategy !== 'home' && dir === 'delay' && Math.abs(P) >= 5) {
-    for (const x of destSleeps.filter(stillShifting).slice(0, 5)) {
-      const cbt = cbts.find((c) => c.t >= x.start - 3 * HOUR && c.t < x.end);
-      const start = up(Math.max((x.start + x.end) / 2, (cbt ? cbt.t : x.start) + CBT_BEFORE_WAKE * HOUR));
-      const end = down(x.end - HOUR);
-      if (end - start >= 45 * MIN) nightMel.push({ start, end, at: start });
     }
   }
   const caf = [];
@@ -400,9 +392,7 @@ function buildLeg(o) {
       seek: clip(seek, r.ownStart, r.ownEnd),
       avoid: clip(avoid, r.ownStart, r.ownEnd),
       melatonin: pts(mel, r.ownStart, r.ownEnd),
-      nightMel: pts(nightMel, r.ownStart, r.ownEnd),
     };
-    r.nightMel = pts(nightMel, r.visStart, r.visEnd);
     r.cbt = cbts.filter((c) => inRange(c.t, a, b)).map((c) => c.t);
     r.sun = sunTimes(r.date, r.place.lat, r.place.lon);
     r.wakes = sleeps.filter((s) => inRange(s.end, r.ownStart, r.ownEnd) && s.end < legEnd - HOUR).map((s) => ({ at: s.end }));
@@ -425,7 +415,7 @@ function buildLeg(o) {
   return {
     leg, origin, dest, oH, oD, diff, choice, P, dir, rate, prep, strategy, T,
     depUtc, arrUtc, planStart, legEnd, sleeps, flightSleeps, seek, avoid,
-    melatonin: mel, nightMelatonin: nightMel, caffeine: caf, cbts, rows, flight, adjustedAt, adjustedDate, daysToAdjust,
+    melatonin: mel, caffeine: caf, cbts, rows, flight, adjustedAt, adjustedDate, daysToAdjust,
     bodyZoneAt, destBed, sleepLen,
     progress: rows.map((r) => ({
       kind: r.kind, date: r.date, index: r.index,

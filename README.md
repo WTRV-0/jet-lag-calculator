@@ -27,7 +27,7 @@ Enter your route, flight times and usual sleep schedule. You get a day-by-day pl
 - The body-temperature low is placed **3 h before habitual wake** (CDC: 2–4 h). Light after it shifts the clock earlier, light before it later; light windows are the waking hours nearest that point, checked against sunrise/sunset.
 - Eastward trips shift earlier, avoiding early-morning light at first on 8+ zone trips. If 9+ h would still need advancing on landing (little or no prep), the plan shifts later instead (AASM review; Burgess protocol).
 - Stays of **2 days or less** keep home time (CDC; AASM). "Meet halfway" is available only when chosen and is not guideline-based.
-- Melatonin (optional): eastward, 30–60 min before destination bedtime from arrival night for up to 5 nights, 0.5–1 mg usually enough, never above 5 mg (Cochrane; CDC). Westward 5+ h: no bedtime dose; 0.5 mg only if awake in the second half of the night (CDC; Roach & Sargent).
+- Melatonin (optional): only for eastward trips across 5+ zones, 30–60 min before destination bedtime from arrival night for up to 5 nights; 0.5–1 mg usually enough, never above 5 mg (Cochrane; CDC). None for westward trips (AASM review).
 - Caffeine fine for daytime alertness, none within 6 h of bed; naps 20–30 min (CDC).
 
 Full references are listed at the bottom of the site. The logic lives in [`js/engine.js`](js/engine.js), a pure module with no DOM.

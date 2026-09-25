@@ -266,22 +266,15 @@ test('a DST change overnight still wakes you at your usual local time', () => {
   assert.equal(localMinutes('America/New_York', night.start), 23 * 60);
 });
 
-test('melatonin follows the research: eastward from arrival night, westward only if awake late in the night', () => {
+test('melatonin follows the research: eastward 5+ zones from arrival night, none westward', () => {
   const east = plan('new-york-united-states', 'london-united-kingdom', '2026-10-10', '19:00', '2026-10-11', '07:00');
   assert.ok(east.out.melatonin.length >= 1 && east.out.melatonin.length <= 5);
   for (const m of east.out.melatonin) assert.ok(m.at > east.times.arrUtc, 'no melatonin before arrival (Cochrane)');
-  assert.equal(east.out.nightMelatonin.length, 0);
   const west = plan('london-united-kingdom', 'new-york-united-states', '2026-10-10', '10:00', '2026-10-10', '13:00', { prepDays: 0 });
-  assert.equal(west.out.melatonin.length, 0, 'no bedtime melatonin for a westward shift');
-  assert.ok(west.out.nightMelatonin.length >= 1);
-  for (const w of west.out.nightMelatonin) {
-    const night = west.out.sleeps.find((x) => w.start >= x.start && w.end <= x.end);
-    assert.ok(night, 'window sits inside a sleep period');
-    assert.ok(w.start >= (night.start + night.end) / 2, 'second half of the night');
-    assert.ok(w.end <= night.end - 3600000, 'not in the last hour before getting up');
-  }
-  const small = plan('london-united-kingdom', 'reykjavik-iceland', '2026-10-10', '10:00', '2026-10-10', '12:00');
-  assert.equal(small.out.nightMelatonin.length, 0, 'westward melatonin only for 5+ hours');
+  assert.equal(west.out.melatonin.length, 0, 'no melatonin for a westward shift');
+  const shortEast = plan('new-york-united-states', 'reykjavik-iceland', '2026-10-10', '20:00', '2026-10-11', '06:00');
+  assert.equal(shortEast.summary.diff, 4);
+  assert.equal(shortEast.out.melatonin.length, 0, 'eastward under 5 zones: no melatonin');
 });
 
 test('caffeine cut-off is 6 h before bed (CDC)', () => {

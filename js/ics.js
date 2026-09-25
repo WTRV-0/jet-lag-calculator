@@ -62,10 +62,6 @@ export function buildIcs(plan, { fT, shortName }) {
       if (m.at > limit) continue;
       add(m.at, m.at + 10 * MIN, '💊 Melatonin (optional)', '0.5–1 mg is usually enough (max 3 mg), 30–60 minutes before bed. Check with your doctor first.', 0);
     }
-    for (const m of leg.nightMelatonin || []) {
-      if (m.start > limit) continue;
-      add(m.start, m.end, '💊 Melatonin only if awake (optional)', 'Only if you wake in this window and can\'t get back to sleep: 0.5 mg. Check with your doctor first.', null);
-    }
     for (const c of leg.caffeine) {
       if (c.at < leg.planStart || c.at > limit) continue;
       add(c.at, c.at + 5 * MIN, '☕ Last caffeine today', 'No more coffee, tea or energy drinks until tomorrow morning.', null);

@@ -398,7 +398,7 @@ function strategyCallout(plan) {
   } else {
     const dirWord = out.dir === 'advance' ? 'earlier' : 'later';
     const how = out.dir === 'advance'
-      ? `<b>Morning light, dim evenings</b>${plan.input.melatonin ? ', melatonin before bed' : ''}`
+      ? `<b>Morning light, dim evenings</b>${out.melatonin.length ? ', optional melatonin before bed' : ''}`
       : '<b>Evening light, dim mornings</b>';
     title = s.strategy === 'partial' ? `Meet halfway: shift ${fHours(out.P)} ${dirWord}` : `Shift your body clock ${fHours(out.P)} ${dirWord}`;
     line = `${how}. About ${out.dir === 'advance' ? '1 h' : '1.5 h'} a day${out.prep ? `, starting ${out.prep} day${out.prep === 1 ? '' : 's'} before you fly` : ''}. After landing, sleep <b>${bed}–${wake}</b>.`;
@@ -540,7 +540,6 @@ function calendarItems(leg, rows) {
     seek: leg.seek.filter(minLen),
     avoid: leg.avoid.filter(minLen),
     mel: leg.melatonin.map((m) => ({ start: m.at, end: m.at })),
-    nightMel: leg.nightMelatonin,
     caf: leg.caffeine.map((c) => ({ start: c.at, end: c.at })),
   };
   return rows.map((r, i) => {
@@ -616,10 +615,6 @@ function timelineHTML(leg, { print = false } = {}) {
       const k = 'm' + m.at;
       inner += `<span class="tl-mel" style="left:${pct(m.at)}" data-tip="${esc(`Melatonin ${fT(r.tz, m.at)}`)}" data-k="${k}"></span>`;
     }
-    for (const m of r.nightMel || []) {
-      const k = 'n' + m.start;
-      inner += `<span class="tl-mel tl-mel-opt" style="left:${pct(m.start)}" data-tip="${esc(`Melatonin only if awake ${fRange(r.tz, m.start, m.end)}`)}" data-k="${k}"></span>`;
-    }
     if (ev && ev.eventUtc >= r.visStart && ev.eventUtc < r.visEnd) {
       inner += `<span class="tl-event" style="left:${pct(ev.eventUtc)}" data-tip="${esc(`Your event ${fT(r.tz, ev.eventUtc)}`)}" data-k="ev"></span>`;
       item('ev', ev.eventUtc, 'event', 'Event', fT(r.tz, ev.eventUtc));
@@ -631,7 +626,6 @@ function timelineHTML(leg, { print = false } = {}) {
     for (const w of c.seek) items.push({ k: 'l' + w.start, t: w.start, sw: 'seek', label: 'Seek light', range: range(w) });
     for (const w of c.avoid) items.push({ k: 'a' + w.start, t: w.start, sw: 'avoid', label: 'Avoid light', range: range(w) });
     for (const m of c.mel) items.push({ k: 'm' + m.start, t: m.start, sw: 'mel', label: 'Melatonin', range: fT(r.tz, m.start) });
-    for (const m of c.nightMel) items.push({ k: 'n' + m.start, t: m.start, sw: 'mel', label: 'Melatonin if awake', range: fRange(r.tz, m.start, m.end) });
     items.sort((a, b) => a.t - b.t);
     const chips = items.map((it) => `<li data-k="${it.k}"><i class="sw sw-${it.sw}" aria-hidden="true"></i><span class="tl-chip-l">${it.label}</span> <b>${esc(it.range)}</b></li>`).join('');
     html += `<div class="tl-row${r.adjusted && r.kind === 'post' ? ' adjusted' : ''}">
@@ -693,7 +687,7 @@ const shiftNote = (h) => (h ? `${fHours(h)} ${h > 0 ? 'earlier' : 'later'} than 
 function tableHTML(leg, { print = false } = {}) {
   const { rows, collapsed } = visibleRows(leg);
   const cal = calendarItems(leg, rows);
-  const showMel = leg.melatonin.length > 0 || leg.nightMelatonin.length > 0;
+  const showMel = leg.melatonin.length > 0;
   const showCaf = state.plan.input.caffeine;
   const cols = ['Day', 'Sleep', 'Bright light', 'Avoid light'];
   if (showMel) cols.push('Melatonin');
@@ -715,8 +709,7 @@ function tableHTML(leg, { print = false } = {}) {
       return `<span class="t">${range(w)}</span>${note ? `<small>${note}</small>` : ''}`;
     }).join('');
     const light = (list, kind) => list.map((w) => `<span class="t">${range(w)}</span><small>${shortLight(w, tz, kind)}</small>`).join('');
-    const mel = [...c.mel.map((m) => `<span class="t">${fT(tz, m.start)}</span><small>optional</small>`),
-      ...c.nightMel.map((m) => `<span class="t">${fRange(tz, m.start, m.end)}</span><small>only if awake</small>`)].join('');
+    const mel = c.mel.map((m) => `<span class="t">${fT(tz, m.start)}</span><small>optional</small>`).join('');
     const evNote = ev && ev.eventUtc >= r.visStart && ev.eventUtc < r.visEnd ? `<small class="ev">★ Event ${fT(tz, ev.eventUtc)}</small>` : '';
     body += `<tr class="k-${r.kind}">
       <th scope="row" data-label="Day"><b>${esc(fDiso(r.date))}</b><small>${esc(kindLabel(r))} · ${esc(shortName(r.place))}</small>${evNote}</th>
@@ -771,7 +764,6 @@ function buildActions(leg, r) {
     });
   }
   for (const m of r.own.melatonin) push(m.at, { cls: 'mel', ic: 'pill', title: 'Melatonin (optional)', note: '0.5–1 mg is usually enough (max 3 mg), 30–60 min before bed. Ask your doctor first.', why: 'Taken in the evening before your new bedtime, melatonin helps shift your clock earlier and helps you sleep.', key: 'mel' + m.at });
-  for (const m of r.own.nightMel) push(m.start, { cls: 'mel', ic: 'pill', title: 'Melatonin only if you wake up', until: fT(tz, m.end), note: 'Awake and can\'t get back to sleep? 0.5 mg (optional). Ask your doctor first.', why: 'Late in the night your body clock reads "morning"; melatonin then helps shift it later, the way you need after flying west.', key: 'nmel' + m.start });
   for (const c of r.caffeine) push(c.at, { cls: '', ic: 'coffee', title: 'Last caffeine', key: 'caf' + c.at });
   for (const bd of r.beds) {
     let note = '';
@@ -959,7 +951,6 @@ function fillPrintSheet() {
   if (s.strategy !== 'home') rules.push(`<b>After landing:</b> stay up until bedtime; naps 20–30 min max.`);
   const extras = [];
   if (out.melatonin.length) extras.push('melatonin (optional; 0.5–1 mg is usually enough) 30–60 min before bed where listed; ask your doctor');
-  if (out.nightMelatonin.length) extras.push('melatonin 0.5 mg only if you wake in the listed night windows (optional; ask your doctor)');
   if (plan.input.caffeine) extras.push('caffeine fine in local daytime, none within 6 h of bed');
   if (extras.length) rules.push(`<b>Also:</b> ${extras.join('; ')}.`);
   if (plan.event) rules.push(`<b>Event ${fD(s.dest.tz, plan.event.eventUtc)} ${fT(s.dest.tz, plan.event.eventUtc)}:</b> body clock ~${fBodyClock(plan.event.bodyHour)} (${plan.event.label.text.toLowerCase()}).`);

@@ -444,7 +444,6 @@ input[aria-invalid="true"] { border-color: var(--bad); }
 .tl-flight { background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--flight) 70%, transparent) 0 2px, transparent 2px 7px); border-left: 2px solid var(--flight); border-right: 2px solid var(--flight); }
 .tl-off { background: var(--surface-2); opacity: .9; }
 .tl-mel { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--mel); box-shadow: 0 0 0 2px var(--surface-2); z-index: 2; }
-.tl-mel.tl-mel-opt { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--mel), 0 0 0 2px var(--surface-2); }
 .tl-event { position: absolute; top: 2px; bottom: 2px; width: 3px; margin-left: -1.5px; background: var(--ink); border-radius: 2px; z-index: 2; }
 .tl-now { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: var(--bad); z-index: 4; }
 .tl-seg.hl, .tl-mel.hl, .tl-event.hl { outline: 2px solid var(--ink); outline-offset: 1px; z-index: 2; }
