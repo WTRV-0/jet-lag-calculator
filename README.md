@@ -14,7 +14,7 @@ Enter your route, flight times and usual sleep schedule. You get a day-by-day pl
 | | |
 |---|---|
 | **Goal modes** | Fully adjust · Stay on home time (short trips) · Meet halfway · Be sharp for an event (it compares strategies by your body-clock time at the event) |
-| **The 8+ zone flip** | For big eastward trips it checks whether shifting *later* the long way round is faster, and flips the light advice when it is |
+| **The 8+ zone flip** | For big eastward trips it keeps early-morning light off at first, and goes the long way round (later) only when 9+ h would remain to shift on landing |
 | **Real daylight** | Light windows are checked against computed sunrise and sunset at your location. You're told when you need a light box and when you need sunglasses |
 | **Flight plan** | In-flight sleep and wake windows lined up with destination night |
 | **"Right now" panel** | Open it mid-trip to see what to do at this moment and what's next |
