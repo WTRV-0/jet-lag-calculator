@@ -354,9 +354,7 @@ function renderResults() {
   const out = plan.out;
   const raw = s.oD - s.oH;
   $('#results-title').textContent = `${shortName(s.home)} → ${shortName(s.dest)}`;
-  const code = (p) => (p.codes && p.codes[0]) || '';
-  const route = code(s.home) && code(s.dest) ? `${code(s.home)} → ${code(s.dest)} · ` : '';
-  $('#results-eyebrow').textContent = `${route}departs ${fD(s.home.tz, plan.times.depUtc)}`;
+  $('#results-eyebrow').textContent = `Your plan · departs ${fD(s.home.tz, plan.times.depUtc)}`;
 
   let adjValue; let adjSub;
   if (s.strategy === 'home') { adjValue = 'Home time'; adjSub = 'No shift needed'; }
