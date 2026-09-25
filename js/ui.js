@@ -661,7 +661,7 @@ function tableHTML(leg, { print = false } = {}) {
   const { rows, collapsed } = visibleRows(leg);
   const showMel = leg.melatonin.length > 0 || leg.nightMelatonin.length > 0;
   const showCaf = state.plan.input.caffeine;
-  const cols = ['Day', 'Sleep', 'Bright light', 'Avoid light'];
+  const cols = ['Day', 'Sleep (that night)', 'Bright light', 'Avoid light'];
   if (showMel) cols.push('Melatonin');
   if (showCaf) cols.push('Last caffeine');
   const none = '<span class="none">—</span>';
@@ -672,11 +672,17 @@ function tableHTML(leg, { print = false } = {}) {
   let body = '';
   for (const r of rows) {
     const tz = r.tz;
-    const sleep = r.beds.map((b) => `<span class="t">${fRange(tz, b.at, b.until)}</span>${r.kind === 'prep' && b.shiftH ? `<small>${shiftNote(b.shiftH)}</small>` : ''}`).join('');
+    let sleep = r.beds.map((b) => `<span class="t">${fRange(tz, b.at, b.until)}</span>${r.kind === 'prep' && b.shiftH ? `<small>${shiftNote(b.shiftH)}</small>` : ''}`).join('');
+    if (r.kind === 'departure') {
+      // the night of the travel day is spent on the plane
+      const dz = leg.dest.tz;
+      const sameClock = offsetHours(tz, leg.depUtc) === offsetHours(dz, leg.depUtc);
+      sleep += leg.flight.sleeps.map((w) => `<span class="t">${fRange(tz, w.start, w.end)}</span><small>on the plane${sameClock ? '' : ` (${fRange(dz, w.start, w.end)} ${esc(shortName(leg.dest))} time)`}</small>`).join('');
+    }
     const evNote = ev && ev.eventUtc >= r.ownStart && ev.eventUtc < r.ownEnd ? `<small class="ev">★ Event ${fT(tz, ev.eventUtc)}</small>` : '';
     body += `<tr class="k-${r.kind}">
       <th scope="row" data-label="Day"><b>${esc(fDiso(r.date))}</b><small>${esc(kindLabel(r))} · ${esc(shortName(r.place))}</small>${evNote}</th>
-      ${cell('Sleep', sleep, 'c-sleep')}
+      ${cell('Sleep (that night)', sleep, 'c-sleep')}
       ${cell('Bright light', ranges(r.own.seek, tz, 'seek'), 'c-seek')}
       ${cell('Avoid light', ranges(r.own.avoid, tz, 'avoid'), 'c-avoid')}
       ${showMel ? cell('Melatonin', [...r.own.melatonin.map((m) => `<span class="t">${fT(tz, m.at)}</span><small>optional</small>`), ...r.own.nightMel.map((m) => `<span class="t">${fRange(tz, m.start, m.end)}</span><small>only if awake</small>`)].join(''), 'c-mel') : ''}
@@ -687,8 +693,6 @@ function tableHTML(leg, { print = false } = {}) {
       const dz = leg.dest.tz;
       const bits = [`<b>${fT(leg.origin.tz, f.start)}</b> ${esc(shortName(leg.origin))} → <b>${fT(dz, f.end)}</b> ${esc(shortName(leg.dest))}${daysBetweenISO(localDateISO(leg.origin.tz, f.start), localDateISO(dz, f.end)) ? ` (${esc(fD(dz, f.end))})` : ''}`,
         `switch to ${esc(shortName(leg.dest))} time`];
-      if (f.sleeps.length) bits.push(`sleep on board <b>${f.sleeps.map((w) => fRange(dz, w.start, w.end)).join(', ')}</b> ${esc(shortName(leg.dest))} time`);
-      else bits.push('stay awake on board');
       bits.push('water, little alcohol');
       body += `<tr class="flight-row"><td colspan="${cols.length}"><span class="fr-ic">${icon('plane')}</span><span><b>Flight</b> · ${bits.join(' · ')}</span></td></tr>`;
     }
