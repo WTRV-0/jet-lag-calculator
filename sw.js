@@ -1,5 +1,5 @@
-// Offline support: app shell is cached; same-origin requests are stale-while-revalidate.
-const VERSION = 'meridian-v2';
+// Offline support: network first (so updates show up immediately), cache as the offline fallback.
+const VERSION = 'meridian-v3';
 const SHELL = [
   './', 'index.html', 'css/styles.css', 'js/ui.js', 'js/engine.js', 'js/tz.js', 'js/sun.js',
   'js/cities.js', 'js/ics.js', 'manifest.webmanifest', 'icons/favicon.svg', 'icons/icon-192.png',
@@ -22,13 +22,15 @@ self.addEventListener('fetch', (e) => {
   const sameOrigin = url.origin === self.location.origin;
   const isFont = /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
   if (!sameOrigin && !isFont) return;
+  const key = sameOrigin && req.mode === 'navigate' ? 'index.html' : req;
   e.respondWith(caches.open(VERSION).then(async (cache) => {
-    const key = sameOrigin && req.mode === 'navigate' ? 'index.html' : req;
-    const cached = await cache.match(key, { ignoreSearch: sameOrigin });
-    const fresh = fetch(req).then((res) => {
+    try {
+      const res = await fetch(req);
       if (res && (res.ok || res.type === 'opaque')) cache.put(key, res.clone());
       return res;
-    }).catch(() => cached);
-    return cached || fresh;
+    } catch {
+      const cached = await cache.match(key, { ignoreSearch: sameOrigin });
+      return cached || Response.error();
+    }
   }));
 });

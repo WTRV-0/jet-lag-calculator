@@ -274,34 +274,45 @@
           <button type="button" role="tab" aria-selected="false" data-leg="return">Return home</button>
         </div>
 
+        <section class="card schedule-card" aria-labelledby="schedule-title">
+          <div class="schedule-head">
+            <div>
+              <h3 id="schedule-title" class="card-title-sm">Schedule</h3>
+              <p class="card-sub" id="schedule-sub">Local times: home clock until you fly, destination clock after you land.</p>
+            </div>
+            <div class="seg seg-sm" role="radiogroup" aria-label="Schedule view">
+              <label><input type="radio" name="view" value="table" checked><span>Table</span></label>
+              <label><input type="radio" name="view" value="timeline"><span>Timeline</span></label>
+            </div>
+          </div>
+          <ul class="legend-inline" id="schedule-legend">
+            <li><i class="sw sw-sleep"></i>Sleep</li>
+            <li><i class="sw sw-seek"></i>Bright light</li>
+            <li><i class="sw sw-avoid"></i>Avoid light</li>
+            <li><i class="sw sw-flight"></i>Flight</li>
+            <li><i class="sw sw-mel"></i>Melatonin</li>
+            <li><i class="sw sw-day"></i>Daylight</li>
+          </ul>
+          <div id="schedule"></div>
+          <p class="print-hint"><svg class="ic"><use href="#i-print"/></svg> "Print summary" prints the view shown here.</p>
+        </section>
+
         <div class="two-col">
+          <section class="card habits-card" aria-labelledby="habits-title">
+            <h3 id="habits-title" class="card-title-sm">Every day until you've adjusted</h3>
+            <ul class="habits" id="habits"></ul>
+          </section>
           <section class="card chart-card" aria-labelledby="progress-title">
-            <h3 id="progress-title" class="card-title-sm">Body-clock shift, day by day</h3>
+            <h3 id="progress-title" class="card-title-sm">Body-clock progress</h3>
             <p class="card-sub" id="progress-sub"></p>
             <div id="progress-chart" class="progress-chart"></div>
           </section>
-          <section class="card legend-card" aria-labelledby="legend-title">
-            <h3 id="legend-title" class="card-title-sm">Reading the timeline</h3>
-            <ul class="legend">
-              <li><i class="sw sw-sleep"></i><span><b>Sleep</b> — your recommended sleep window</span></li>
-              <li><i class="sw sw-seek"></i><span><b>Seek light</b> — daylight, or a light box if it's dark out</span></li>
-              <li><i class="sw sw-avoid"></i><span><b>Avoid light</b> — dim lights, sunglasses outside</span></li>
-              <li><i class="sw sw-flight"></i><span><b>In flight</b></span></li>
-              <li><i class="sw sw-mel"></i><span><b>Melatonin</b></span></li>
-              <li><i class="sw sw-day"></i><span><b>Daylight</b> at your location</span></li>
-            </ul>
-          </section>
         </div>
 
-        <section class="card timeline-card" aria-labelledby="timeline-title">
-          <div class="timeline-head">
-            <h3 id="timeline-title" class="card-title-sm">Timeline</h3>
-            <p class="card-sub">Each row runs midnight to midnight on the clock you're living by that day. Times for every block are listed under its bar.</p>
-          </div>
-          <div id="timeline" class="timeline"></div>
-        </section>
-
-        <h3 class="section-sub">Day by day</h3>
+        <div class="days-head">
+          <h3 class="section-sub">Day by day</h3>
+          <button type="button" class="link-btn" id="expand-all">Expand all</button>
+        </div>
         <div id="days" class="days"></div>
 
         <p class="disclaimer-inline"><svg class="ic"><use href="#i-info"/></svg> This is general guidance, not medical advice. Check with your doctor before using melatonin, especially if you're pregnant, take other medicines, or have a sleep disorder.</p>
