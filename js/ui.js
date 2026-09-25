@@ -425,7 +425,7 @@ function habitsHTML(plan) {
   items.push(['water', 'Drink water; go easy on alcohol.']);
   const legs = [plan.out, plan.ret].filter(Boolean);
   if (legs.some((l) => l.seek.some((w) => w.light === 'dark' || w.light === 'mixed'))) {
-    items.push(['sun', 'Some light windows fall in the dark. A light box can stand in; check with your doctor first, especially with eye conditions, migraines, bipolar disorder or light-sensitising medicines.']);
+    items.push(['sun', 'Light windows in the dark: bright room lights are enough. A light box is optional; if you use one, check with your doctor first (eye conditions, migraines, bipolar disorder, light-sensitising medicines).']);
   }
   return items.map(([ic, t]) => `<li>${icon(ic)}<span>${esc(t)}</span></li>`).join('');
 }
@@ -646,10 +646,10 @@ function lightNote(w, tz, kind) {
   if (kind === 'seek') {
     if (w.light === 'flight') return 'Reading light on, window shade up if it\'s light outside.';
     if (w.light === 'sun') return 'Get outside. Daylight beats indoor light, even when cloudy.';
-    if (w.light === 'dark') return 'It\'s dark out: use the brightest indoor light, or a light box if your doctor agrees.';
+    if (w.light === 'dark') return 'It\'s dark out: keep the room lights bright. You don\'t need to stare at anything; just be in a well-lit room.';
     if (w.light === 'mixed') {
-      if (w.sunrise > w.start && w.sunrise < w.end) return `Light box until sunrise (${fT(tz, w.sunrise)}), then outside.`;
-      if (w.sunset > w.start && w.sunset < w.end) return `Outside until sunset (${fT(tz, w.sunset)}), then a light box.`;
+      if (w.sunrise > w.start && w.sunrise < w.end) return `Bright room lights until sunrise (${fT(tz, w.sunrise)}), then get outside.`;
+      if (w.sunset > w.start && w.sunset < w.end) return `Get outside until sunset (${fT(tz, w.sunset)}), then keep the room lights bright.`;
     }
     return 'Get outside, or sit by a bright window.';
   }
@@ -664,10 +664,10 @@ function shortLight(w, tz, kind) {
   if (kind === 'seek') {
     if (w.light === 'flight') return 'cabin light';
     if (w.light === 'sun') return 'outside';
-    if (w.light === 'dark') return 'light box';
+    if (w.light === 'dark') return 'bright indoor light';
     if (w.light === 'mixed') {
-      if (w.sunrise > w.start && w.sunrise < w.end) return `outside after ${fT(tz, w.sunrise)}`;
-      if (w.sunset > w.start && w.sunset < w.end) return `outside until ${fT(tz, w.sunset)}`;
+      if (w.sunrise > w.start && w.sunrise < w.end) return `indoor light, outside after ${fT(tz, w.sunrise)}`;
+      if (w.sunset > w.start && w.sunset < w.end) return `outside until ${fT(tz, w.sunset)}, then indoor light`;
     }
     return 'outside';
   }
@@ -684,40 +684,43 @@ function cbtLocal(leg, tz, near) {
 const shiftNote = (h) => (h ? `${fHours(h)} ${h > 0 ? 'earlier' : 'later'} than usual` : '');
 
 // ---- schedule table ---------------------------------------------------------
+// The table reads like a day, left to right: wake-up, light, caffeine, melatonin, then that night's
+// bedtime. Each row covers wake-up to bedtime (so an after-midnight bedtime stays on its evening's row).
 function tableHTML(leg, { print = false } = {}) {
   const { rows, collapsed } = visibleRows(leg);
-  const cal = calendarItems(leg, rows);
   const showMel = leg.melatonin.length > 0;
   const showCaf = state.plan.input.caffeine;
-  const cols = ['Day', 'Sleep', 'Bright light', 'Avoid light'];
-  if (showMel) cols.push('Melatonin');
+  const cols = ['Day', 'Wake up', 'Bright light', 'Avoid light'];
   if (showCaf) cols.push('Last caffeine');
+  if (showMel) cols.push('Melatonin');
+  cols.push('Bedtime');
   const none = '<span class="none">—</span>';
   const cell = (label, html, cls = '') => `<td data-label="${label}"${cls ? ` class="${cls}"` : ''}>${html || none}</td>`;
   const ev = leg.leg === 'out' ? state.plan.event : null;
+  const dz = leg.dest.tz;
   let body = '';
-  rows.forEach((r, i) => {
+  rows.forEach((r) => {
     const tz = r.tz;
-    const c = cal[i];
-    const range = (w) => (w.carry ? `until ${fT(tz, w.end)}` : fRange(tz, w.start, w.end));
-    const dz = leg.dest.tz;
-    const sameClock = offsetHours(tz, leg.depUtc) === offsetHours(dz, leg.depUtc);
-    const sleep = c.sleep.map((w) => {
-      let note = '';
-      if (w.plane) note = `on the plane${sameClock || tz === dz ? '' : ` (${fRange(dz, w.start, w.end)} ${esc(shortName(leg.dest))} time)`}`;
-      else if (w.shiftH) note = shiftNote(w.shiftH);
-      return `<span class="t">${range(w)}</span>${note ? `<small>${note}</small>` : ''}`;
+    const wake = r.wakes.map((w) => {
+      const sh = leg.sleeps.find((x) => x.end === w.at)?.shiftH || 0;
+      return `<span class="t">${fT(tz, w.at)}</span>${sh && (r.kind === 'prep' || r.kind === 'departure') ? `<small>${shiftNote(sh)}</small>` : ''}`;
     }).join('');
-    const light = (list, kind) => list.map((w) => `<span class="t">${range(w)}</span><small>${shortLight(w, tz, kind)}</small>`).join('');
-    const mel = c.mel.map((m) => `<span class="t">${fT(tz, m.start)}</span><small>optional</small>`).join('');
-    const evNote = ev && ev.eventUtc >= r.visStart && ev.eventUtc < r.visEnd ? `<small class="ev">★ Event ${fT(tz, ev.eventUtc)}</small>` : '';
+    let bed = r.beds.map((b) => `<span class="t">${fT(tz, b.at)}</span><small>${r.kind === 'prep' && b.shiftH ? `${shiftNote(b.shiftH)}; ` : ''}up at ${fT(tz, b.until)}</small>`).join('');
+    if (r.kind === 'departure') {
+      const sameClock = offsetHours(tz, leg.depUtc) === offsetHours(dz, leg.depUtc);
+      bed += leg.flight.sleeps.map((w) => `<span class="t">${fRange(tz, w.start, w.end)}</span><small>on the plane${sameClock ? '' : ` (${fRange(dz, w.start, w.end)} ${esc(shortName(leg.dest))} time)`}</small>`).join('');
+    }
+    const light = (list, kind) => list.filter((w) => w.end - w.start >= 20 * MIN)
+      .map((w) => `<span class="t">${fRange(tz, w.start, w.end)}</span><small>${shortLight(w, tz, kind)}</small>`).join('');
+    const evNote = ev && ev.eventUtc >= r.ownStart && ev.eventUtc < r.ownEnd ? `<small class="ev">★ Event ${fT(tz, ev.eventUtc)}</small>` : '';
     body += `<tr class="k-${r.kind}">
       <th scope="row" data-label="Day"><b>${esc(fDiso(r.date))}</b><small>${esc(kindLabel(r))} · ${esc(shortName(r.place))}</small>${evNote}</th>
-      ${cell('Sleep', sleep, 'c-sleep')}
-      ${cell('Bright light', light(c.seek, 'seek'), 'c-seek')}
-      ${cell('Avoid light', light(c.avoid, 'avoid'), 'c-avoid')}
-      ${showMel ? cell('Melatonin', mel, 'c-mel') : ''}
-      ${showCaf ? cell('Last caffeine', c.caf.map((x) => `<span class="t">${fT(tz, x.start)}</span>`).join('')) : ''}
+      ${cell('Wake up', wake, 'c-sleep')}
+      ${cell('Bright light', light(r.own.seek, 'seek'), 'c-seek')}
+      ${cell('Avoid light', light(r.own.avoid, 'avoid'), 'c-avoid')}
+      ${showCaf ? cell('Last caffeine', r.caffeine.map((x) => `<span class="t">${fT(tz, x.at)}</span>`).join('')) : ''}
+      ${showMel ? cell('Melatonin', r.own.melatonin.map((m) => `<span class="t">${fT(tz, m.at)}</span><small>optional</small>`).join(''), 'c-mel') : ''}
+      ${cell('Bedtime', bed, 'c-sleep')}
     </tr>`;
     if (r.kind === 'departure') {
       const f = leg.flight;
@@ -729,8 +732,8 @@ function tableHTML(leg, { print = false } = {}) {
   if (collapsed.length) {
     const a = collapsed[0]; const b = collapsed[collapsed.length - 1];
     const last = [...rows].reverse().find((r) => r.beds.length);
-    const sl = last ? fRange(last.tz, last.beds[0].at, last.beds[0].until) : '';
-    body += `<tr class="adjusted-row"><th scope="row" data-label="Day"><b>${esc(fDiso(a.date))}${collapsed.length > 1 ? ` – ${esc(fDiso(b.date))}` : ''}</b><small>adjusted ✓</small></th><td colspan="${cols.length - 1}">Normal routine${sl ? `: sleep ${sl}` : ''}, daylight in the morning.</td></tr>`;
+    const sl = last ? `wake ${fT(last.tz, last.beds[0].until)}, bed ${fT(last.tz, last.beds[0].at)}` : '';
+    body += `<tr class="adjusted-row"><th scope="row" data-label="Day"><b>${esc(fDiso(a.date))}${collapsed.length > 1 ? ` – ${esc(fDiso(b.date))}` : ''}</b><small>adjusted ✓</small></th><td colspan="${cols.length - 1}">Normal routine${sl ? `: ${sl}` : ''}, daylight in the morning.</td></tr>`;
   }
   return `<div class="table-wrap"><table class="sched${print ? ' sched-print' : ''}"><thead><tr>${cols.map((c) => `<th scope="col">${c}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
