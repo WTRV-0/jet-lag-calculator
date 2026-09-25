@@ -14,6 +14,7 @@ const icon = (name) => `<svg class="ic" aria-hidden="true"><use href="#i-${name}
 const store = {
   get(k, fallback = null) { try { const v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
+  remove(k) { try { localStorage.removeItem(k); } catch { /* storage unavailable */ } },
 };
 
 // ---------------------------------------------------------------------------
@@ -251,7 +252,8 @@ function updatePreview() {
   const oD = offsetHours(to.tz, refUtc);
   const raw = oD - oH;
   const diff = norm12(raw);
-  const choice = chooseShift(diff);
+  const prepDays = Number(radio('prep') ?? 3);
+  const choice = chooseShift(diff, prepDays);
   const now = Date.now();
   const clock = (p) => `<div class="pv-clock"><div class="pv-city">${esc(shortName(p))}</div><div class="pv-time" data-live-tz="${esc(p.tz)}">${fT(p.tz, now)}</div><div class="pv-day">${fD(p.tz, now)} · UTC${formatOffset(offsetHours(p.tz, now))}</div></div>`;
 
@@ -263,9 +265,13 @@ function updatePreview() {
   } else {
     const aheadBehind = raw > 0 ? 'ahead of' : 'behind';
     gapText = `${esc(shortName(to))} is ${fHours(raw)} ${aheadBehind} ${esc(shortName(from))}${els.depDate.value ? ' on your travel date' : ' today'}.`;
-    if (choice.flipped) note = `<b>The rule flips here.</b> Shifting ${fHours(choice.amount)} <em>later</em> is about as fast as ${fHours(24 - choice.amount)} earlier, and much easier on the body. Expect <b>evening light</b> and <b>no morning light</b> at first.`;
-    else if (choice.dir === 'advance') note = `Eastward shift: your clock needs to move <b>${fHours(choice.amount)} earlier</b>. Expect <b>morning light</b> and <b>dim evenings</b>. Roughly ${choice.days} day${choice.days === 1 ? '' : 's'} to adjust fully.`;
-    else note = `Westward shift: your clock needs to move <b>${fHours(choice.amount)} later</b>. Expect <b>evening light</b> and <b>dim mornings</b>. Roughly ${choice.days} day${choice.days === 1 ? '' : 's'} to adjust fully.`;
+    const days = `Roughly ${choice.days} day${choice.days === 1 ? '' : 's'} to adjust fully.`;
+    if (choice.flipped && diff >= 12) note = `<b>Halfway round the world.</b> Either direction is ${fHours(12)}; shifting <em>later</em> is easier, so expect <b>evening light</b> and <b>dim mornings</b>. ${days}`;
+    else if (choice.flipped) note = `<b>The rule flips here.</b> With ${fHours(choice.remaining)} still to shift earlier when you land, the body clock tends to drift <em>later</em> instead, so the plan goes ${fHours(choice.amount)} later: <b>evening light</b>, no morning light at first. ${days} More prep days would let it shift earlier.`;
+    else if (choice.dir === 'advance') note = `Eastward shift: your clock needs to move <b>${fHours(choice.amount)} earlier</b>. Expect <b>morning light</b> and <b>dim evenings</b>${diff >= 8 ? ', but avoid early-morning light for the first days; light windows start later and move earlier each day' : ''}. ${days}`;
+    else note = `Westward shift: your clock needs to move <b>${fHours(choice.amount)} later</b>. Expect <b>evening light</b> and <b>dim mornings</b>. ${days}`;
+    if (Math.abs(raw) < 2) note = `<b>Little or no jet lag expected.</b> Jet lag usually needs 2+ time zones. ${note}`;
+    else note += `<span class="pv-tip">Choosing flights? An arrival that lets you get ${choice.dir === 'advance' ? (diff >= 8 ? 'late-morning or midday' : 'morning') : 'afternoon or evening'} light on day one helps (CDC).</span>`;
   }
 
   // dial: home at top, destination at its offset; highlighted arc = recommended direction
@@ -396,14 +402,17 @@ function strategyCallout(plan) {
       : '<b>Evening light, dim mornings</b>';
     title = s.strategy === 'partial' ? `Meet halfway: shift ${fHours(out.P)} ${dirWord}` : `Shift your body clock ${fHours(out.P)} ${dirWord}`;
     line = `${how}. About ${out.dir === 'advance' ? '1 h' : '1.5 h'} a day${out.prep ? `, starting ${out.prep} day${out.prep === 1 ? '' : 's'} before you fly` : ''}. After landing, sleep <b>${bed}–${wake}</b>.`;
-    if (s.strategy === 'partial') line += ` A full ${fHours(c.amount)} shift isn't worth it for ${tripN ? `${tripN} days` : 'this stay'}.`;
-    if (c.flipped) flip = `<p class="rule-flip">↺ Long way round: ${fHours(c.amount)} later takes about as long as ${fHours(24 - c.amount)} earlier (~${c.days} vs ~${c.altDays} days) and is gentler, so the usual eastbound rule flips.</p>`;
+    if (s.strategy === 'partial') line += ' You chose this in-between option; it isn\'t part of CDC or AASM guidance.';
+    if (c.flipped && s.diff >= 12) flip = '<p class="rule-flip">↺ Halfway round the world: either way is 12 h, and shifting later is easier.</p>';
+    else if (c.flipped) flip = `<p class="rule-flip">↺ Long way round: with ${fHours(c.remaining)} still to shift earlier on landing, arrival light hits just before your body's low point and the clock tends to drift later, so the plan goes with it. The usual eastbound rule flips. ${out.prep < 3 ? 'More prep days would let the plan shift earlier instead.' : ''}</p>`;
+    else if (out.dir === 'advance' && s.diff >= 8) flip = '<p class="rule-flip">At 8+ zones east, your body\'s low point lands in the local morning at first, so the plan has you <b>avoid early-morning light</b> for the first days and get light later in the morning; the windows move earlier each day.</p>';
   }
+  if (Math.abs(s.oD - s.oH) < 2 && out.dir !== 'none') flip += '<p class="callout-note">Little or no jet lag expected: jet lag usually needs 2+ time zones. The plan below is optional.</p>';
   let note = '';
   if (s.reason === 'chosen' && s.autoStrategy !== s.strategy) {
     note = `You chose this goal. For this trip length the planner would suggest ${{ adjust: 'fully adjusting', home: 'staying on home time', partial: 'meeting halfway' }[s.autoStrategy]}.`;
   } else if (s.reason === 'event') note = 'Chosen to make you sharpest for your event.';
-  else if (s.reason !== 'chosen') note = tripN != null ? `Picked for your ${tripN}-day stay.` : 'Add a return date and the planner can pick a better strategy for short stays.';
+  else if (s.reason !== 'chosen') note = tripN != null ? `Picked for your ${tripN}-day stay (stays of 2 days or less keep home time).` : 'Add a return date: for stays of 2 days or less, staying on home time is recommended.';
   return `<div class="card callout"><span class="ic-wrap">${icon(ic)}</span><div><h3>${esc(title)}</h3><p>${line}</p>${flip}${note ? `<p class="callout-note">${note}</p>` : ''}</div></div>`;
 }
 
@@ -412,8 +421,12 @@ function habitsHTML(plan) {
   const items = plan.summary.strategy === 'home'
     ? [['bed', 'Sleep on your home schedule. An eye mask helps if it falls in daylight.'], ['clock', 'Put important things in your home-time daytime.'], ['nap', 'Naps: 20–30 min at most.']]
     : [['alarm', 'Get up at the same local time, even after a bad night.'], ['nap', `Naps: 20–30 min at most, and before ${three}.`], ['meal', 'Eat meals on local time.'], ['walk', 'Exercise or walk outside, ideally in a bright-light window.']];
-  if (plan.input.caffeine) items.push(['coffee', 'No caffeine in the 8 hours before bed.']);
+  if (plan.input.caffeine) items.push(['coffee', 'Caffeine is fine for alertness during local daytime; none in the 6 hours before bed.']);
   items.push(['water', 'Drink water; go easy on alcohol.']);
+  const legs = [plan.out, plan.ret].filter(Boolean);
+  if (legs.some((l) => l.seek.some((w) => w.light === 'dark' || w.light === 'mixed'))) {
+    items.push(['sun', 'Some light windows fall in the dark. A light box can stand in; check with your doctor first, especially with eye conditions, migraines, bipolar disorder or light-sensitising medicines.']);
+  }
   return items.map(([ic, t]) => `<li>${icon(ic)}<span>${esc(t)}</span></li>`).join('');
 }
 
@@ -576,6 +589,11 @@ function timelineHTML(leg, { print = false } = {}) {
       inner += `<span class="tl-mel" style="left:${pct(m.at)}" data-tip="${esc(`Melatonin ${fT(r.tz, m.at)}`)}" data-k="${k}"></span>`;
       item(k, m.at, 'mel', 'Melatonin', fT(r.tz, m.at));
     }
+    for (const m of r.nightMel || []) {
+      const k = 'n' + m.start;
+      inner += `<span class="tl-mel tl-mel-opt" style="left:${pct(m.start)}" data-tip="${esc(`Melatonin only if awake ${fRange(r.tz, m.start, m.end)}`)}" data-k="${k}"></span>`;
+      item(k, m.start, 'mel', 'Melatonin if awake', fRange(r.tz, m.start, m.end));
+    }
     if (ev && ev.eventUtc >= r.visStart && ev.eventUtc < r.visEnd) {
       inner += `<span class="tl-event" style="left:${pct(ev.eventUtc)}" data-tip="${esc(`Your event ${fT(r.tz, ev.eventUtc)}`)}" data-k="ev"></span>`;
       item('ev', ev.eventUtc, 'event', 'Event', fT(r.tz, ev.eventUtc));
@@ -601,7 +619,7 @@ function lightNote(w, tz, kind) {
   if (kind === 'seek') {
     if (w.light === 'flight') return 'Reading light on, window shade up if it\'s light outside.';
     if (w.light === 'sun') return 'Get outside. Daylight beats indoor light, even when cloudy.';
-    if (w.light === 'dark') return 'It\'s dark out: use a light box or the brightest indoor light.';
+    if (w.light === 'dark') return 'It\'s dark out: use the brightest indoor light, or a light box if your doctor agrees.';
     if (w.light === 'mixed') {
       if (w.sunrise > w.start && w.sunrise < w.end) return `Light box until sunrise (${fT(tz, w.sunrise)}), then outside.`;
       if (w.sunset > w.start && w.sunset < w.end) return `Outside until sunset (${fT(tz, w.sunset)}), then a light box.`;
@@ -641,7 +659,7 @@ const shiftNote = (h) => (h ? `${fHours(h)} ${h > 0 ? 'earlier' : 'later'} than 
 // ---- schedule table ---------------------------------------------------------
 function tableHTML(leg, { print = false } = {}) {
   const { rows, collapsed } = visibleRows(leg);
-  const showMel = leg.melatonin.length > 0;
+  const showMel = leg.melatonin.length > 0 || leg.nightMelatonin.length > 0;
   const showCaf = state.plan.input.caffeine;
   const cols = ['Day', 'Sleep', 'Bright light', 'Avoid light'];
   if (showMel) cols.push('Melatonin');
@@ -661,7 +679,7 @@ function tableHTML(leg, { print = false } = {}) {
       ${cell('Sleep', sleep || (r.kind === 'departure' ? '<small>on the plane</small>' : ''), 'c-sleep')}
       ${cell('Bright light', ranges(r.own.seek, tz, 'seek'), 'c-seek')}
       ${cell('Avoid light', ranges(r.own.avoid, tz, 'avoid'), 'c-avoid')}
-      ${showMel ? cell('Melatonin', r.own.melatonin.map((m) => `<span class="t">${fT(tz, m.at)}</span>`).join(''), 'c-mel') : ''}
+      ${showMel ? cell('Melatonin', [...r.own.melatonin.map((m) => `<span class="t">${fT(tz, m.at)}</span><small>optional</small>`), ...r.own.nightMel.map((m) => `<span class="t">${fRange(tz, m.start, m.end)}</span><small>only if awake</small>`)].join(''), 'c-mel') : ''}
       ${showCaf ? cell('Last caffeine', r.caffeine.map((c) => `<span class="t">${fT(tz, c.at)}</span>`).join('')) : ''}
     </tr>`;
     if (r.kind === 'departure') {
@@ -712,7 +730,8 @@ function buildActions(leg, r) {
       why: w.hold ? 'Light now would start shifting you off home time.' : 'Light now would shift your clock the wrong way.',
     });
   }
-  for (const m of r.own.melatonin) push(m.at, { cls: 'mel', ic: 'pill', title: 'Melatonin 0.5–3 mg', note: 'Optional; 30–60 min before bed. Ask your doctor first.', key: 'mel' + m.at });
+  for (const m of r.own.melatonin) push(m.at, { cls: 'mel', ic: 'pill', title: 'Melatonin (optional)', note: '0.5–1 mg is usually enough (max 3 mg), 30–60 min before bed. Ask your doctor first.', why: 'Taken in the evening before your new bedtime, melatonin helps shift your clock earlier and helps you sleep.', key: 'mel' + m.at });
+  for (const m of r.own.nightMel) push(m.start, { cls: 'mel', ic: 'pill', title: 'Melatonin only if you wake up', until: fT(tz, m.end), note: 'Awake and can\'t get back to sleep? 0.5 mg (optional). Ask your doctor first.', why: 'Late in the night your body clock reads "morning"; melatonin then helps shift it later, the way you need after flying west.', key: 'nmel' + m.start });
   for (const c of r.caffeine) push(c.at, { cls: '', ic: 'coffee', title: 'Last caffeine', key: 'caf' + c.at });
   for (const bd of r.beds) {
     let note = '';
@@ -762,9 +781,6 @@ function flightActions(leg) {
   const acts = [{ t: f.start, cls: '', ic: 'plane', time: t(f.start), sub: `${fT(leg.origin.tz, f.start)} ${shortName(leg.origin)}`, title: `Board: switch to ${shortName(leg.dest)} time`, note: 'Eat and sleep on destination time from now.', key: 'f-board' }];
   for (const s of f.sleeps) {
     acts.push({ t: s.start, cls: 'sleep', ic: 'bed', time: t(s.start), until: t(s.end), title: 'Sleep on the plane', note: 'Night at your destination. Eye mask, earplugs.', key: 'f-sleep' + s.start });
-    if (leg.dir === 'advance' && state.plan.input.melatonin && leg.strategy !== 'home') {
-      acts.push({ t: s.start - 30 * MIN, cls: 'mel', ic: 'pill', time: t(s.start - 30 * MIN), title: 'Melatonin (optional)', note: '30 min before in-flight sleep.', key: 'f-mel' + s.start });
-    }
   }
   const edges = [f.start + 30 * MIN, ...f.sleeps.flatMap((s) => [s.start, s.end]), f.end - 30 * MIN];
   for (let i = 0; i < edges.length; i += 2) {
@@ -801,7 +817,7 @@ function renderDays(leg) {
       const inAir = now >= f.start && now < f.end;
       const body2 = `<p class="day-body-clock">${icon('plane')}<span>${fT(leg.origin.tz, f.start)} ${esc(shortName(leg.origin))} → ${fT(leg.dest.tz, f.end)} ${esc(shortName(leg.dest))} · ${fDur((f.end - f.start) / MIN)}</span></p>
         ${actionList(flightActions(leg), leg.leg)}
-        <p class="day-tip">${icon('info')}<span>Eat on ${esc(shortName(leg.dest))} time. Water yes; alcohol and caffeine sparingly.</span></p>`;
+        <p class="day-tip">${icon('info')}<span>Eat on ${esc(shortName(leg.dest))} time. Water yes; alcohol and caffeine sparingly. Skip antihistamine sleep aids and long-acting sedatives; ask a doctor about short-acting options.</span></p>`;
       html += dayCard({ open: inAir, kicker: 'In the air', title: `${shortName(leg.origin)} → ${shortName(leg.dest)}`, zone: `${shortName(leg.dest)} time`, body: body2, cls: 'flight-card' });
     }
   });
@@ -902,8 +918,9 @@ function fillPrintSheet() {
   rules.push(`<b>On the plane:</b> switch to ${esc(to)} time; eat and sleep on it.`);
   if (s.strategy !== 'home') rules.push(`<b>After landing:</b> stay up until bedtime; naps 20–30 min max.`);
   const extras = [];
-  if (out.melatonin.length) extras.push('melatonin 0.5–3 mg 30–60 min before bed where listed (optional; ask your doctor)');
-  if (plan.input.caffeine) extras.push('no caffeine within 8 h of bed');
+  if (out.melatonin.length) extras.push('melatonin (optional; 0.5–1 mg is usually enough) 30–60 min before bed where listed; ask your doctor');
+  if (out.nightMelatonin.length) extras.push('melatonin 0.5 mg only if you wake in the listed night windows (optional; ask your doctor)');
+  if (plan.input.caffeine) extras.push('caffeine fine in local daytime, none within 6 h of bed');
   if (extras.length) rules.push(`<b>Also:</b> ${extras.join('; ')}.`);
   if (plan.event) rules.push(`<b>Event ${fD(s.dest.tz, plan.event.eventUtc)} ${fT(s.dest.tz, plan.event.eventUtc)}:</b> body clock ~${fBodyClock(plan.event.bodyHour)} (${plan.event.label.text.toLowerCase()}).`);
 
@@ -1019,6 +1036,28 @@ function fillExample() {
 }
 const fmtHM = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
+// Clear the current plan and the remembered trip, and go back to an empty form
+function resetPlan() {
+  state.plan = null;
+  state.leg = 'out';
+  store.remove('meridian-last');
+  try { history.replaceState(null, '', location.pathname); } catch { /* ignore */ }
+  els.form.reset();
+  state.from = null;
+  state.to = null;
+  els.fromInput.value = '';
+  els.toInput.value = '';
+  $$('[aria-invalid]').forEach((e) => e.removeAttribute('aria-invalid'));
+  showError('');
+  els.results.hidden = true;
+  $('#now-box').innerHTML = '';
+  document.body.classList.remove('has-print-sheet');
+  defaults();
+  syncModes();
+  updateHints();
+  updatePreview();
+}
+
 function defaults() {
   const home = guessHome();
   if (home) setPlace('from', home);
@@ -1074,11 +1113,26 @@ function init() {
   });
   $$('input[name="arr-mode"], input[name="goal"]').forEach((r) => r.addEventListener('change', syncModes));
   els.form.addEventListener('input', (e) => { if (!e.target.closest('.combo')) updatePreview(); });
+  els.form.addEventListener('change', (e) => { if (e.target.name === 'prep') updatePreview(); });
   els.form.addEventListener('submit', (e) => { e.preventDefault(); build(); });
   $('#example-btn').addEventListener('click', fillExample);
   $('#share-btn').addEventListener('click', share);
   $('#ics-btn').addEventListener('click', downloadIcs);
   $('#print-btn').addEventListener('click', () => { fillPrintSheet(); window.print(); });
+  $('#reset-btn').addEventListener('click', () => {
+    resetPlan();
+    $('#planner').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast('Cleared. Start a new plan.');
+  });
+  $('#edit-btn').addEventListener('click', () => {
+    $('#planner').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => els.depDate.focus({ preventScroll: true }), 400);
+  });
+  $('.brand').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (state.plan || location.search) resetPlan();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
   addEventListener('beforeprint', fillPrintSheet);
   // hovering a time in the list highlights its block on the bar (and vice versa)
   const hl = (k, on) => $$(`#schedule [data-k="${k}"]`).forEach((n) => n.classList.toggle('hl', on));

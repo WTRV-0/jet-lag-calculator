@@ -16,7 +16,10 @@ import { sunTimes } from './sun.js';
 
 export const RATE = { advance: 1, delay: 1.5, prep: 1, travelFactor: 0.5 };
 export const CBT_BEFORE_WAKE = 3; // hours
-export const FLIP_THRESHOLD = 9; // eastward hours at which delaying "the long way" can win
+// Eastward trips normally shift earlier. When 9+ hours would still need advancing after the pre-trip days,
+// arrival-day light lands just before the body-temperature low and the clock tends to shift later instead
+// (Burgess 2011 jet-lag protocol; AASM review, Sack et al. 2007), so the plan goes that way.
+export const LONG_WAY_THRESHOLD = 9;
 const SLOT = 15 * MIN;
 const MAX_POST_DAYS = 14;
 
@@ -33,15 +36,17 @@ export function norm12(h) {
 const mod = (a, n) => ((a % n) + n) % n;
 
 // diff: hours the body must move (positive = destination clock is ahead = eastward).
-export function chooseShift(diff) {
+// prepDays: pre-trip days that can be used to start shifting.
+export function chooseShift(diff, prepDays = 0) {
   if (Math.abs(diff) < 0.01) return { dir: 'none', P: 0, amount: 0, flipped: false, days: 0 };
   if (diff > 0) {
     const adv = diff / RATE.advance;
     const del = (24 - diff) / RATE.delay;
-    if (diff >= FLIP_THRESHOLD && del <= adv + 1) {
-      return { dir: 'delay', P: -(24 - diff), amount: 24 - diff, flipped: true, days: Math.ceil(del), altDays: Math.ceil(adv) };
+    const remaining = diff - Math.min(prepDays, Math.ceil(diff)); // advance still needed on landing
+    if (diff >= 12 || remaining >= LONG_WAY_THRESHOLD) {
+      return { dir: 'delay', P: -(24 - diff), amount: 24 - diff, flipped: true, days: Math.ceil(del), altDays: Math.ceil(adv), remaining };
     }
-    return { dir: 'advance', P: diff, amount: diff, flipped: false, days: Math.ceil(adv), altDays: Math.ceil(del) };
+    return { dir: 'advance', P: diff, amount: diff, flipped: false, days: Math.ceil(adv), altDays: Math.ceil(del), remaining };
   }
   return { dir: 'delay', P: diff, amount: -diff, flipped: false, days: Math.ceil(-diff / RATE.delay), altDays: Math.ceil((24 + diff) / RATE.advance) };
 }
@@ -115,7 +120,7 @@ function buildLeg(o) {
   const oH = offsetHours(origin.tz, depUtc);
   const oD = offsetHours(dest.tz, arrUtc);
   const diff = norm12(oD - bodyStart);
-  const choice = chooseShift(diff);
+  const choice = chooseShift(diff, prepDays);
   let P = choice.P;
   if (strategy === 'home') P = 0;
   if (strategy === 'partial') P = roundHalf(choice.P / 2);
@@ -193,6 +198,12 @@ function buildLeg(o) {
     t = t + DAY - step * HOUR;
     if (adjustedAt == null && Math.abs(P - phi) < 0.01) adjustedAt = t;
   }
+
+  const phiAtRaw = (x) => {
+    let last = cbts[0];
+    for (const c of cbts) { if (c.t <= x) last = c; else break; }
+    return last ? last.phi : 0;
+  };
 
   let legEnd;
   if (hardEnd != null) legEnd = hardEnd;
@@ -293,25 +304,41 @@ function buildLeg(o) {
   avoid.forEach((w) => annotateLight(w, 'avoid'));
 
   // ---- Melatonin & caffeine --------------------------------------------------
+  // Eastward (advance): optional dose 30–60 min before local bedtime from the night you arrive, for up to
+  // 5 nights or until adjusted (Cochrane review: bedtime at destination on arrival day and the next 2–5 days;
+  // no benefit shown from taking it before departure). Skipped if the body clock would read 00:00–05:00,
+  // when melatonin is least effective (CDC).
+  // Westward (delay) of 5 h or more: no bedtime dose (bedtime melatonin could work against a delay, AASM
+  // review), but an optional low dose if you wake in the second half of the night, when the body clock
+  // reads "morning" and melatonin shifts it later (CDC; Roach & Sargent 2019).
   const mel = [];
-  if (melatonin && dir === 'advance') {
-    for (const s of sleeps) {
-      const shifting = s.place === 'origin' ? s.prepIndex >= 1 : adjustedAt == null || s.start < adjustedAt + 12 * HOUR;
-      if (shifting && s.start > planStart) mel.push({ at: s.start - 45 * MIN, bed: s.start });
+  const nightMel = [];
+  const destSleeps = sleeps.filter((x) => x.place === 'dest');
+  const stillShifting = (x) => adjustedAt == null || x.start < adjustedAt + 12 * HOUR;
+  if (melatonin && strategy !== 'home' && dir === 'advance') {
+    for (const x of destSleeps.filter(stillShifting).slice(0, 5)) {
+      const at = x.start - 45 * MIN;
+      const bodyHour = mod(at / HOUR + bodyStart + phiAtRaw(at), 24);
+      if (bodyHour < 5) continue;
+      mel.push({ at, bed: x.start });
+    }
+  }
+  if (melatonin && strategy !== 'home' && dir === 'delay' && Math.abs(P) >= 5) {
+    for (const x of destSleeps.filter(stillShifting).slice(0, 5)) {
+      const cbt = cbts.find((c) => c.t >= x.start - 3 * HOUR && c.t < x.end);
+      const start = up(Math.max((x.start + x.end) / 2, (cbt ? cbt.t : x.start) + CBT_BEFORE_WAKE * HOUR));
+      const end = down(x.end - HOUR);
+      if (end - start >= 45 * MIN) nightMel.push({ start, end, at: start });
     }
   }
   const caf = [];
   if (caffeine) {
-    for (const s of sleeps) if (s.start > planStart) caf.push({ at: s.start - 8 * HOUR, bed: s.start });
+    for (const x of sleeps) if (x.start > planStart) caf.push({ at: x.start - 6 * HOUR, bed: x.start });
   }
 
   // ---- Rows (one per calendar day on the clock you are living by) -----------
   const rows = [];
-  const phiAt = (x) => {
-    let last = cbts[0];
-    for (const c of cbts) { if (c.t <= x) last = c; else break; }
-    return last ? last.phi : 0;
-  };
+  const phiAt = phiAtRaw;
   const bodyZoneAt = (x) => bodyStart + phiAt(x);
   // shift banked by the first body-clock low point after x (i.e. by the next morning)
   const phiAfter = (x) => {
@@ -373,7 +400,9 @@ function buildLeg(o) {
       seek: clip(seek, r.ownStart, r.ownEnd),
       avoid: clip(avoid, r.ownStart, r.ownEnd),
       melatonin: pts(mel, r.ownStart, r.ownEnd),
+      nightMel: pts(nightMel, r.ownStart, r.ownEnd),
     };
+    r.nightMel = pts(nightMel, r.visStart, r.visEnd);
     r.cbt = cbts.filter((c) => inRange(c.t, a, b)).map((c) => c.t);
     r.sun = sunTimes(r.date, r.place.lat, r.place.lon);
     r.wakes = sleeps.filter((s) => inRange(s.end, r.ownStart, r.ownEnd) && s.end < legEnd - HOUR).map((s) => ({ at: s.end }));
@@ -396,7 +425,7 @@ function buildLeg(o) {
   return {
     leg, origin, dest, oH, oD, diff, choice, P, dir, rate, prep, strategy, T,
     depUtc, arrUtc, planStart, legEnd, sleeps, flightSleeps, seek, avoid,
-    melatonin: mel, caffeine: caf, cbts, rows, flight, adjustedAt, adjustedDate, daysToAdjust,
+    melatonin: mel, nightMelatonin: nightMel, caffeine: caf, cbts, rows, flight, adjustedAt, adjustedDate, daysToAdjust,
     bodyZoneAt, destBed, sleepLen,
     progress: rows.map((r) => ({
       kind: r.kind, date: r.date, index: r.index,
@@ -409,12 +438,12 @@ function buildLeg(o) {
 // ---------------------------------------------------------------------------
 // Strategy selection
 
+// Short stays (2 days or less) across 3+ zones: keep home time (CDC; AASM 2007). Otherwise adjust.
 function autoStrategy(diff, choice, tripDays) {
   const zones = Math.abs(diff);
   if (zones < 1) return { strategy: 'adjust', reason: 'small' };
-  if (tripDays != null && tripDays < 3 && zones >= 3) return { strategy: 'home', reason: 'short' };
-  if (tripDays != null && tripDays < 6 && tripDays < choice.days * 0.75) return { strategy: 'partial', reason: 'medium' };
-  return { strategy: 'adjust', reason: 'long' };
+  if (tripDays != null && tripDays <= 2 && zones >= 3) return { strategy: 'home', reason: 'short' };
+  return { strategy: 'adjust', reason: tripDays != null ? 'long' : 'noreturn' };
 }
 
 function evaluateEvent(legPlan, eventUtc, wake) {
@@ -431,7 +460,7 @@ export function buildPlan(input) {
   const oH = offsetHours(home.tz, times.depUtc);
   const oD = offsetHours(dest.tz, times.arrUtc);
   const diff = norm12(oD - oH);
-  const choice = chooseShift(diff);
+  const choice = chooseShift(diff, input.prepDays || 0);
   const tripDays = times.retDepUtc ? (times.retDepUtc - times.arrUtc) / DAY : null;
   const auto = autoStrategy(diff, choice, tripDays);
 
@@ -449,7 +478,7 @@ export function buildPlan(input) {
   let eventInfo = null;
   let out;
   if (input.goal === 'event' && times.eventUtc) {
-    const candidates = ['adjust', 'partial', 'home'].filter((s) => s !== 'partial' || Math.abs(choice.P) >= 3);
+    const candidates = ['adjust', 'home']; // "meet halfway" is not guideline-based, so only when chosen
     const results = candidates.map((s) => {
       const lp = legFor(s);
       return { strategy: s, plan: lp, ...evaluateEvent(lp, times.eventUtc, input.wake) };

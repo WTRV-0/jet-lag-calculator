@@ -1,5 +1,5 @@
 // Offline support: network first (so updates show up immediately), cache as the offline fallback.
-const VERSION = 'meridian-v3';
+const VERSION = 'meridian-v4';
 const SHELL = [
   './', 'index.html', 'css/styles.css', 'js/ui.js', 'js/engine.js', 'js/tz.js', 'js/sun.js',
   'js/cities.js', 'js/ics.js', 'manifest.webmanifest', 'icons/favicon.svg', 'icons/icon-192.png',

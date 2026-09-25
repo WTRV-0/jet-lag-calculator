@@ -43,16 +43,17 @@ test('norm12 folds into (−12, 12]', () => {
   assert.equal(norm12(0), 0);
 });
 
-test('direction choice and the 9 h+ eastward flip', () => {
+test('direction choice: east advances unless 9+ h would remain on landing', () => {
   assert.equal(chooseShift(5).dir, 'advance');
   assert.equal(chooseShift(8).dir, 'advance');
-  const nine = chooseShift(9);
+  const nine = chooseShift(9, 0);
   assert.equal(nine.dir, 'delay');
   assert.equal(nine.flipped, true);
   assert.equal(nine.amount, 15);
-  const ten = chooseShift(10);
-  assert.equal(ten.flipped, true);
-  assert.equal(ten.amount, 14);
+  assert.equal(chooseShift(9, 3).dir, 'advance', 'a 3-day pre-shift makes a 9 h advance workable');
+  assert.equal(chooseShift(10, 3).dir, 'advance');
+  assert.equal(chooseShift(11, 1).flipped, true);
+  assert.equal(chooseShift(12, 3).dir, 'delay', '12 h either way: later is easier');
   assert.equal(chooseShift(-10).dir, 'delay');
   assert.equal(chooseShift(-10).flipped, false);
   assert.equal(chooseShift(0).dir, 'none');
@@ -117,12 +118,15 @@ test('Chicago → Tokyo (+14 h clocks = 10 h delay): evening light, avoid mornin
   assert.ok([10, -14].includes(p.ret.P), `return shifts back 10 h earlier or 14 h later, got ${p.ret.P}`);
 });
 
-test('9+ h eastbound flips to a delay (London → Tokyo in winter)', () => {
+test('London → Tokyo in winter (+9): advance with prep days, avoiding early-morning light at first', () => {
   const p = plan('london-united-kingdom', 'tokyo-japan', '2026-11-10', '19:00', '2026-11-11', '15:30');
   assert.equal(p.summary.diff, 9);
-  assert.equal(p.out.choice.flipped, true);
-  assert.equal(p.out.dir, 'delay');
-  for (const r of postRows(p.out)) for (const w of r.own.seek) assert.ok(localH(r.tz, w.start) >= 12, 'flipped plan uses afternoon/evening light');
+  assert.equal(p.out.dir, 'advance');
+  const day2 = p.out.rows.find((r) => r.kind === 'post');
+  assert.ok(day2.own.avoid.some((w) => localH(day2.tz, w.start) < 9), 'avoid early-morning light on day 2');
+  assert.ok(day2.own.seek.every((w) => localH(day2.tz, w.start) >= 8), 'light comes later in the morning');
+  const p0 = plan('london-united-kingdom', 'tokyo-japan', '2026-11-10', '19:00', '2026-11-11', '15:30', { prepDays: 0 });
+  assert.equal(p0.out.dir, 'delay', 'without pre-shifting, the clock tends to go the long way (Burgess)');
 });
 
 test('LA → Sydney is a delay', () => {
@@ -131,8 +135,8 @@ test('LA → Sydney is a delay', () => {
   assert.equal(p.out.dir, 'delay');
 });
 
-test('short trip (2 days) stays on home time', () => {
-  const p = plan('new-york-united-states', 'paris-france', '2026-10-10', '18:00', '2026-10-11', '07:30', { retDate: '2026-10-13', retTime: hm('10:00') });
+test('short trip (2 days or less) stays on home time', () => {
+  const p = plan('new-york-united-states', 'paris-france', '2026-10-10', '18:00', '2026-10-11', '07:30', { retDate: '2026-10-13', retTime: hm('06:00') });
   assert.equal(p.summary.strategy, 'home');
   assert.equal(p.out.P, 0);
   assert.equal(p.out.seek.length, 0);
@@ -142,14 +146,16 @@ test('short trip (2 days) stays on home time', () => {
   assert.ok(m >= 4 * 60 && m <= 6 * 60, `home-time bedtime in Paris should be ~05:00, got ${m / 60}`);
 });
 
-test('medium trip meets halfway', () => {
-  const p = plan('new-york-united-states', 'paris-france', '2026-10-10', '18:00', '2026-10-11', '07:30', { retDate: '2026-10-15', retTime: hm('10:00') });
-  assert.equal(p.summary.strategy, 'partial');
-  assert.equal(p.out.P, 3);
+test('stays over 2 days adjust; "meet halfway" only when chosen', () => {
+  const p = plan('new-york-united-states', 'paris-france', '2026-10-10', '18:00', '2026-10-11', '07:30', { retDate: '2026-10-13', retTime: hm('10:00') });
+  assert.equal(p.summary.strategy, 'adjust');
+  const q = plan('new-york-united-states', 'paris-france', '2026-10-10', '18:00', '2026-10-11', '07:30', { retDate: '2026-10-15', retTime: hm('10:00'), goal: 'partial' });
+  assert.equal(q.summary.strategy, 'partial');
+  assert.equal(q.out.P, 3);
 });
 
 test('explicit goal overrides auto', () => {
-  const p = plan('new-york-united-states', 'paris-france', '2026-10-10', '18:00', '2026-10-11', '07:30', { retDate: '2026-10-13', retTime: hm('10:00'), goal: 'adjust' });
+  const p = plan('new-york-united-states', 'paris-france', '2026-10-10', '18:00', '2026-10-11', '07:30', { retDate: '2026-10-13', retTime: hm('06:00'), goal: 'adjust' });
   assert.equal(p.summary.strategy, 'adjust');
   assert.equal(p.summary.reason, 'chosen');
   assert.equal(p.summary.autoStrategy, 'home');
@@ -191,7 +197,7 @@ test('event mode flags a body-clock-night event and picks a better strategy', ()
   assert.equal(alertLabel(alertness(0)).key, 'night');
   assert.equal(alertLabel(alertness(12)).key, 'sharp');
   const p = plan('new-york-united-states', 'paris-france', '2026-10-10', '18:00', '2026-10-11', '07:30', {
-    retDate: '2026-10-13', retTime: hm('18:00'), goal: 'event', event: { date: '2026-10-12', time: hm('09:00') },
+    retDate: '2026-10-13', retTime: hm('06:00'), goal: 'event', event: { date: '2026-10-12', time: hm('09:00') },
   });
   const home = p.event.compare.find((c) => c.strategy === 'home');
   assert.equal(home.label.key, 'night', '09:00 Paris is 03:00 in New York');
@@ -258,6 +264,29 @@ test('a DST change overnight still wakes you at your usual local time', () => {
   assert.ok(night, 'has the night US clocks go back');
   assert.equal(localMinutes('America/New_York', night.end), 7 * 60);
   assert.equal(localMinutes('America/New_York', night.start), 23 * 60);
+});
+
+test('melatonin follows the research: eastward from arrival night, westward only if awake late in the night', () => {
+  const east = plan('new-york-united-states', 'london-united-kingdom', '2026-10-10', '19:00', '2026-10-11', '07:00');
+  assert.ok(east.out.melatonin.length >= 1 && east.out.melatonin.length <= 5);
+  for (const m of east.out.melatonin) assert.ok(m.at > east.times.arrUtc, 'no melatonin before arrival (Cochrane)');
+  assert.equal(east.out.nightMelatonin.length, 0);
+  const west = plan('london-united-kingdom', 'new-york-united-states', '2026-10-10', '10:00', '2026-10-10', '13:00', { prepDays: 0 });
+  assert.equal(west.out.melatonin.length, 0, 'no bedtime melatonin for a westward shift');
+  assert.ok(west.out.nightMelatonin.length >= 1);
+  for (const w of west.out.nightMelatonin) {
+    const night = west.out.sleeps.find((x) => w.start >= x.start && w.end <= x.end);
+    assert.ok(night, 'window sits inside a sleep period');
+    assert.ok(w.start >= (night.start + night.end) / 2, 'second half of the night');
+    assert.ok(w.end <= night.end - 3600000, 'not in the last hour before getting up');
+  }
+  const small = plan('london-united-kingdom', 'reykjavik-iceland', '2026-10-10', '10:00', '2026-10-10', '12:00');
+  assert.equal(small.out.nightMelatonin.length, 0, 'westward melatonin only for 5+ hours');
+});
+
+test('caffeine cut-off is 6 h before bed (CDC)', () => {
+  const p = plan('new-york-united-states', 'london-united-kingdom', '2026-10-10', '19:00', '2026-10-11', '07:00');
+  for (const c of p.out.caffeine) assert.equal(c.bed - c.at, 6 * 3600000);
 });
 
 test('invalid input gives a helpful error', () => {

@@ -66,6 +66,7 @@
         <a href="#planner">Planner</a>
         <a href="#science">How it works</a>
         <a href="#protocol">Protocol</a>
+        <a href="#references">Sources</a>
       </nav>
       <div class="header-tools">
         <button class="icon-btn" id="clock-toggle" type="button" aria-label="Switch between 12- and 24-hour time" title="12h / 24h"><span id="clock-label">24h</span></button>
@@ -211,10 +212,10 @@
         <fieldset class="group">
           <legend>Your goal</legend>
           <div class="goal-grid" role="radiogroup">
-            <label class="goal"><input type="radio" name="goal" value="auto" checked><span><strong>Let the planner decide</strong><small>Picks the best strategy from how long you're staying</small></span></label>
+            <label class="goal"><input type="radio" name="goal" value="auto" checked><span><strong>Let the planner decide</strong><small>Home time for stays of 2 days or less, otherwise fully adjust</small></span></label>
             <label class="goal"><input type="radio" name="goal" value="adjust"><span><strong>Fully adjust</strong><small>Get onto local time as fast as possible</small></span></label>
             <label class="goal"><input type="radio" name="goal" value="home"><span><strong>Stay on home time</strong><small>Best for very short trips</small></span></label>
-            <label class="goal"><input type="radio" name="goal" value="partial"><span><strong>Meet halfway</strong><small>Shift about half the gap for a few-day stay</small></span></label>
+            <label class="goal"><input type="radio" name="goal" value="partial"><span><strong>Meet halfway</strong><small>Shift about half the gap. Not part of CDC/AASM guidance</small></span></label>
             <label class="goal"><input type="radio" name="goal" value="event"><span><strong>Be sharp for an event</strong><small>A meeting, race or ceremony at a set time</small></span></label>
           </div>
           <div class="grid-2" id="event-fields" hidden>
@@ -261,6 +262,8 @@
             <button type="button" class="btn btn-soft" id="ics-btn"><svg class="ic"><use href="#i-cal"/></svg> Add to calendar</button>
             <button type="button" class="btn btn-soft" id="share-btn"><svg class="ic"><use href="#i-link"/></svg> <span>Copy link</span></button>
             <button type="button" class="btn btn-soft" id="print-btn"><svg class="ic"><use href="#i-print"/></svg> Print summary</button>
+            <button type="button" class="btn btn-soft" id="edit-btn">Edit trip</button>
+            <button type="button" class="btn btn-soft" id="reset-btn">New plan</button>
           </div>
         </div>
 
@@ -324,12 +327,12 @@
       <h2 id="science-title">Your body clock moves slowly. Light moves it.</h2>
       <div class="science-grid">
         <div class="card sci-card">
-          <h3>1 · 60–120 minutes a day</h3>
-          <p>Your circadian rhythm can only shift about one to two hours per day. Seven time zones can take up to a week to adjust to, and another week to adjust back. Moving <em>later</em> (westward) is easier than moving <em>earlier</em> (eastward), so the planner uses about 1.5 hours a day for delays and 1 hour a day for advances.</p>
+          <h3>1 · About 1–1.5 hours a day</h3>
+          <p>Your body clock adjusts gradually. The planner uses the CDC's average rates: about <strong>1 hour a day</strong> when shifting earlier (eastward) and <strong>1.5 hours a day</strong> when shifting later (westward)<a class="ref" href="#ref-1">[1]</a>. Estimates vary; the AASM's patient guide uses about one day per time zone<a class="ref" href="#ref-4">[4]</a>, so treat "adjusted by" as a best case.</p>
         </div>
         <div class="card sci-card">
           <h3>2 · Timing is everything</h3>
-          <p>Your body temperature bottoms out about 3 hours before your usual wake time. Bright light in the hours <strong>after</strong> that low point moves your clock <strong>earlier</strong>. Light in the hours <strong>before</strong> it moves your clock <strong>later</strong>. Get it the wrong way round and you adjust in the wrong direction.</p>
+          <p>Your body temperature bottoms out about 2–4 hours before your usual wake time; the planner uses 3 hours<a class="ref" href="#ref-1">[1]</a><a class="ref" href="#ref-6">[6]</a>. Bright light in the hours <strong>after</strong> that low point moves your clock <strong>earlier</strong>. Light in the hours <strong>before</strong> it moves your clock <strong>later</strong>. Get it the wrong way round and you adjust in the wrong direction.</p>
           <figure class="prc" aria-label="Diagram: light before the body's temperature low point shifts the clock later; light after it shifts the clock earlier.">
             <svg viewBox="0 0 320 120" role="img">
               <title>Light before the temperature low point delays the clock; light after it advances the clock</title>
@@ -345,12 +348,12 @@
           </figure>
         </div>
         <div class="card sci-card">
-          <h3>3 · Sometimes the long way round wins</h3>
-          <p>Eastbound usually means morning light. But once you cross about 9 or more zones eastward, it's often faster to push your clock <em>later</em> all the way round. For Chicago → Tokyo, for example, the plan recommends <strong>evening</strong> light and avoiding <strong>morning</strong> light, which is the opposite of the usual eastbound rule. The planner works out which way is faster for your trip.</p>
+          <h3>3 · Big eastward trips: the rule can flip</h3>
+          <p>After flying 8 or more zones east, your body's low point first lands in the local <em>morning</em>, so morning light would push your clock the wrong way<a class="ref" href="#ref-3">[3]</a>. The planner still shifts you earlier, but has you <strong>avoid early-morning light</strong> at first and get light later in the day, moving the windows earlier each day. If 9+ hours would still need shifting when you land (for example with no prep days), the clock tends to drift <em>later</em> instead, so the plan goes that way<a class="ref" href="#ref-6">[6]</a>. Chicago → Tokyo is simply a 10-hour <em>later</em> shift (Tokyo is 14 h ahead), so it gets evening light.</p>
         </div>
         <div class="card sci-card">
-          <h3>4 · Short trips: don't bother</h3>
-          <p>For stays under about 2–3 days across many zones, keeping your home schedule (or as close as you can) usually beats half-adjusting and then adjusting back. For stays of a few days, "meet halfway" splits the difference.</p>
+          <h3>4 · Short trips: stay on home time</h3>
+          <p>For stays of <strong>2 days or less</strong>, keep your home sleep, meal and activity times as closely as you can instead of adapting<a class="ref" href="#ref-1">[1]</a><a class="ref" href="#ref-2">[2]</a>. "Meet halfway" is offered as an extra option but isn't part of CDC or AASM guidance.</p>
         </div>
       </div>
     </section>
@@ -363,10 +366,10 @@
           <span class="step-n">1</span>
           <h3>Plan ahead <small>2–3 days before</small></h3>
           <ul>
-            <li>Shift bedtime and wake time about <strong>1 hour a day</strong> toward your destination.</li>
-            <li><strong>Eastbound:</strong> bed and wake 1 hour earlier each day.</li>
-            <li><strong>Westbound:</strong> bed and wake 1 hour later each day.</li>
-            <li>Short trip (under ~2 days) across many zones? Stay on your home schedule.</li>
+            <li>Shift bedtime and wake time about <strong>1 hour a day</strong> toward your destination<a class="ref" href="#ref-1">[1]</a><a class="ref" href="#ref-2">[2]</a>.</li>
+            <li><strong>Eastbound:</strong> bed and wake 1 hour earlier each day, with bright light in the morning.</li>
+            <li><strong>Westbound:</strong> bed and wake 1 hour later each day, with bright light in the evening.</li>
+            <li>Short trip (2 days or less) across many zones? Stay on your home schedule.</li>
           </ul>
         </li>
         <li class="card step">
@@ -374,34 +377,35 @@
           <h3>Travel smart</h3>
           <p class="step-sub">During the flight</p>
           <ul>
-            <li>Set your watch to destination time as soon as you board.</li>
-            <li>Eat and sleep on destination time.</li>
+            <li>Set your watch to destination time as soon as you board; eat and sleep on it<a class="ref" href="#ref-1">[1]</a>.</li>
             <li>Drink water. Go easy on alcohol and caffeine; both disrupt sleep.</li>
+            <li>Avoid antihistamine sleep aids and long-acting sedatives<a class="ref" href="#ref-1">[1]</a>.</li>
           </ul>
           <p class="step-sub">After you land</p>
           <ul>
             <li>Get outside for natural light (see step 3 for timing).</li>
-            <li>Keep naps to 20–30 minutes.</li>
+            <li>Keep naps to 20–30 minutes<a class="ref" href="#ref-1">[1]</a>.</li>
             <li>Stay awake until your new local bedtime.</li>
-            <li>Move your body during local daytime.</li>
+            <li>Move your body during local daytime, ideally outdoors<a class="ref" href="#ref-4">[4]</a>.</li>
+            <li>Caffeine is fine for daytime alertness; stop 6 hours before bed<a class="ref" href="#ref-1">[1]</a>.</li>
           </ul>
         </li>
         <li class="card step">
           <span class="step-n">3</span>
           <h3>Time your light</h3>
           <ul>
-            <li><strong>Flying east</strong> (e.g. US → Europe): bright light in the <strong>morning</strong>; avoid it in the evening.</li>
-            <li><strong>Flying west</strong> (e.g. Europe → US): bright light in the <strong>evening</strong>; avoid it in the morning.</li>
-            <li><strong>8+ zones:</strong> the rule can flip. Your plan above gives exact windows.</li>
+            <li><strong>Flying east</strong> (e.g. US → Europe): bright light in the <strong>morning</strong>; avoid it in the evening<a class="ref" href="#ref-1">[1]</a>.</li>
+            <li><strong>Flying west</strong> (e.g. Europe → US): bright light in the <strong>evening</strong>; avoid it in the morning<a class="ref" href="#ref-1">[1]</a>.</li>
+            <li><strong>8+ zones:</strong> the rule can flip. Your plan above gives exact windows<a class="ref" href="#ref-3">[3]</a><a class="ref" href="#ref-6">[6]</a>.</li>
           </ul>
         </li>
         <li class="card step">
           <span class="step-n">4</span>
           <h3>Melatonin <small>optional; talk to your doctor</small></h3>
           <ul>
-            <li>Low dose, <strong>0.5–3 mg</strong>, taken <strong>30–60 minutes before</strong> your destination bedtime.</li>
-            <li>It may help you adjust faster, especially when flying east.</li>
-            <li>Melatonin is sold as a supplement and isn't FDA-regulated, so what's in the bottle can differ from the label.</li>
+            <li><strong>Flying east:</strong> a low dose 30–60 minutes before your destination bedtime, from the night you arrive, for up to about 5 nights<a class="ref" href="#ref-5">[5]</a>. <strong>0.5–1 mg is usually enough</strong>; don't take more than 5 mg<a class="ref" href="#ref-1">[1]</a>.</li>
+            <li><strong>Flying west (5+ zones):</strong> not at bedtime. Only if you wake in the second half of the night and can't get back to sleep, 0.5 mg can help and nudges your clock later<a class="ref" href="#ref-1">[1]</a><a class="ref" href="#ref-7">[7]</a>.</li>
+            <li>Melatonin is sold as a supplement and isn't FDA-regulated, so what's in the bottle can differ from the label<a class="ref" href="#ref-1">[1]</a>.</li>
           </ul>
         </li>
       </ol>
@@ -411,20 +415,37 @@
       <p class="eyebrow">Questions</p>
       <h2 id="faq-title">Good to know</h2>
       <div class="faq">
-        <details><summary>What counts as "bright light"?</summary><p>Outdoor daylight is best. Even an overcast day is many times brighter than indoor lighting. If a light window falls before sunrise or after sunset, a 10,000-lux light box or the brightest indoor light you can find is the next best thing. The plan tells you when that's the case.</p></details>
+        <details><summary>Does this follow CDC and AASM guidance?</summary><p>Yes. The pre-trip shift, adjustment rates, light timing, nap length, caffeine, short-trip and melatonin advice follow the CDC Yellow Book<a class="ref" href="#ref-1">[1]</a> and the American Academy of Sleep Medicine's jet lag recommendations<a class="ref" href="#ref-2">[2]</a><a class="ref" href="#ref-3">[3]</a><a class="ref" href="#ref-4">[4]</a>, with details from the research listed under Sources. "Meet halfway" and the event alertness estimate are extra features that aren't part of that guidance.</p></details>
+        <details><summary>What counts as "bright light"?</summary><p>Outdoor daylight is best. Even an overcast day is many times brighter than indoor lighting. If a light window falls in the dark, use the brightest indoor light you can, or a light box if your doctor agrees. The plan tells you when that's the case.</p></details>
         <details><summary>How do I "avoid" light?</summary><p>Stay indoors with dim, warm lighting. Outside, wear dark sunglasses, and turn down screen brightness. On the plane, use the window shade and an eye mask.</p></details>
-        <details><summary>Why doesn't westbound get melatonin reminders?</summary><p>Evening melatonin nudges the clock <em>earlier</em>, which works against a westward (later) shift. For westbound or "long way round" plans, the planner skips daily reminders. If you wake too early and can't get back to sleep, ask your doctor whether a small dose makes sense for you.</p></details>
-        <details><summary>Is my data stored anywhere?</summary><p>No. Everything is calculated in your browser. Your last trip is remembered on this device only, and the share link holds your trip details in the URL itself.</p></details>
+        <details><summary>Why is westward melatonin different?</summary><p>Melatonin taken in your body's evening shifts the clock earlier, which helps after flying east but works against a westward (later) shift<a class="ref" href="#ref-3">[3]</a>. Taken in your body's "morning", it shifts the clock later<a class="ref" href="#ref-1">[1]</a><a class="ref" href="#ref-7">[7]</a>; after a westward flight that falls in the second half of your local night. So for westward shifts of 5+ hours the plan shows an optional low dose (0.5 mg) only if you wake in that window. Evidence for westward melatonin is weaker than for eastward<a class="ref" href="#ref-5">[5]</a><a class="ref" href="#ref-6">[6]</a>.</p></details>
+        <details><summary>Who should be careful with melatonin or light boxes?</summary><p>Talk to your doctor first<a class="ref" href="#ref-4">[4]</a>. Melatonin is generally not advised during pregnancy or breastfeeding, for children, with other medicines unless supervised, or before driving until you know how it affects you. Bright light boxes need care with eye disease, light-sensitising medicines, migraines or bipolar disorder<a class="ref" href="#ref-6">[6]</a>.</p></details>
+        <details><summary>What about sleeping pills?</summary><p>Short-acting prescription sleep aids are an option to discuss with your doctor for jet lag insomnia<a class="ref" href="#ref-1">[1]</a><a class="ref" href="#ref-2">[2]</a>. Avoid antihistamine sleep aids and long-acting sedatives, especially on the plane<a class="ref" href="#ref-1">[1]</a>.</p></details>
+        <details><summary>Is my data stored anywhere?</summary><p>No. Everything is calculated in your browser. Your last trip is remembered on this device only (use "New plan" to clear it), and the share link holds your trip details in the URL itself.</p></details>
         <details><summary>Does it work offline?</summary><p>Yes. After your first visit the planner is cached, so you can open your plan on the plane. On a phone, use "Add to Home Screen" to install it like an app.</p></details>
-        <details><summary>How accurate is this?</summary><p>It uses well-established rules about how light shifts the body clock, with sensible average rates. People vary, so treat the times as a guide and not to the minute. If you feel you're adjusting faster or slower, trust your body.</p></details>
+        <details><summary>How accurate is this?</summary><p>It uses well-established rules about how light shifts the body clock, with average rates. People vary, and field evidence for timed light is still limited<a class="ref" href="#ref-3">[3]</a>, so treat the times as a guide and not to the minute. If you feel you're adjusting faster or slower, trust your body.</p></details>
       </div>
+    </section>
+
+    <section id="references" class="wrap prose-section" aria-labelledby="references-title">
+      <p class="eyebrow">Sources</p>
+      <h2 id="references-title">References</h2>
+      <ol class="refs">
+        <li id="ref-1">Riedy SM, Williams SG. Jet lag disorder. In: <em>CDC Yellow Book: Health Information for International Travel</em>. Centers for Disease Control and Prevention; reviewed 2025. <a href="https://www.cdc.gov/yellow-book/hcp/travel-air-sea/jet-lag-disorder.html">cdc.gov</a></li>
+        <li id="ref-2">Morgenthaler TI, Lee-Chiong T, Alessi C, et al. Practice parameters for the clinical evaluation and treatment of circadian rhythm sleep disorders. An American Academy of Sleep Medicine report. <em>Sleep</em>. 2007;30(11):1445–1459. <a href="https://aasm.org/wp-content/uploads/2017/07/PP_CircadianRhythm.pdf">aasm.org</a> (Still the AASM's jet lag guidance; the 2015 update did not cover jet lag.)</li>
+        <li id="ref-3">Sack RL, Auckley D, Auger RR, et al. Circadian rhythm sleep disorders: Part I, basic principles, shift work and jet lag disorders. An American Academy of Sleep Medicine review. <em>Sleep</em>. 2007;30(11):1460–1483. <a href="https://aasm.org/resources/practiceparameters/review_circadianrhythm.pdf">aasm.org</a></li>
+        <li id="ref-4">American Academy of Sleep Medicine. Jet lag. <em>Sleep Education</em>. <a href="https://sleepeducation.org/sleep-disorders/jet-lag/">sleepeducation.org</a></li>
+        <li id="ref-5">Herxheimer A, Petrie KJ. Melatonin for the prevention and treatment of jet lag. <em>Cochrane Database Syst Rev</em>. 2002;(2):CD001520. <a href="https://www.cochrane.org/evidence/CD001520_melatonin-prevention-and-treatment-jet-lag">cochrane.org</a></li>
+        <li id="ref-6">Burgess HJ. Using bright light and melatonin to reduce jet lag. In: Perlis M, Aloia M, Kuhn B, eds. <em>Behavioral Treatments for Sleep Disorders</em>. Academic Press; 2011:151–157. <a href="https://doi.org/10.1016/B978-0-12-381522-4.00016-X">doi.org</a></li>
+        <li id="ref-7">Roach GD, Sargent C. Interventions to minimize jet lag after westward and eastward flight. <em>Front Physiol</em>. 2019;10:927. <a href="https://doi.org/10.3389/fphys.2019.00927">doi.org</a></li>
+      </ol>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="wrap footer-inner">
       <p><strong>Meridian</strong> — a free jet lag planner. Calculations run entirely in your browser.</p>
-      <p class="muted">For general information only, not medical advice. Melatonin is a dietary supplement and not FDA-regulated.</p>
+      <p class="muted">For general information only, not medical advice. Based on CDC and AASM guidance (<a href="#references">see references</a>). Melatonin is a dietary supplement and not FDA-regulated.</p>
     </div>
   </footer>
 

@@ -21,14 +21,16 @@ Enter your route, flight times and usual sleep schedule. You get a day-by-day pl
 | **Take it with you** | Calendar export (.ics) with reminders, a share link (the whole trip is in the URL), print/PDF, and offline use as an installable web app |
 | **Private** | Everything is computed in the browser. No accounts, no tracking |
 
-## The model
+## The model (CDC / AASM aligned)
 
-- The body clock is treated as a "body time zone" that moves toward the destination at about **1 h/day for advances** and **1.5 h/day for delays**. That's within the 60–120 min/day physiological range.
-- The core body temperature minimum is placed **3 h before habitual wake time**. Light in the hours after it moves the clock earlier. Light in the hours before it moves the clock later.
-- Light windows are the waking hours nearest that point on the correct side. They're trimmed around sleep and flight times, then annotated with daylight.
-- Trip length picks the strategy: under ~3 days → stay on home time; a few days → meet halfway; otherwise → fully adjust.
+- Pre-trip shift of 1 h/day for up to 3 days; body clock then moves about **1 h/day earlier** or **1.5 h/day later** (CDC Yellow Book).
+- The body-temperature low is placed **3 h before habitual wake** (CDC: 2–4 h). Light after it shifts the clock earlier, light before it later; light windows are the waking hours nearest that point, checked against sunrise/sunset.
+- Eastward trips shift earlier, avoiding early-morning light at first on 8+ zone trips. If 9+ h would still need advancing on landing (little or no prep), the plan shifts later instead (AASM review; Burgess protocol).
+- Stays of **2 days or less** keep home time (CDC; AASM). "Meet halfway" is available only when chosen and is not guideline-based.
+- Melatonin (optional): eastward, 30–60 min before destination bedtime from arrival night for up to 5 nights, 0.5–1 mg usually enough, never above 5 mg (Cochrane; CDC). Westward 5+ h: no bedtime dose; 0.5 mg only if awake in the second half of the night (CDC; Roach & Sargent).
+- Caffeine fine for daytime alertness, none within 6 h of bed; naps 20–30 min (CDC).
 
-The logic lives in [`js/engine.js`](js/engine.js), a pure module with no DOM.
+Full references are listed at the bottom of the site. The logic lives in [`js/engine.js`](js/engine.js), a pure module with no DOM.
 
 ## Project layout
 
