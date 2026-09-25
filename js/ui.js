@@ -354,14 +354,16 @@ function renderResults() {
   const out = plan.out;
   const raw = s.oD - s.oH;
   $('#results-title').textContent = `${shortName(s.home)} → ${shortName(s.dest)}`;
-  $('#results-eyebrow').textContent = `Your plan · departs ${fD(s.home.tz, plan.times.depUtc)}`;
+  const code = (p) => (p.codes && p.codes[0]) || '';
+  const route = code(s.home) && code(s.dest) ? `${code(s.home)} → ${code(s.dest)} · ` : '';
+  $('#results-eyebrow').textContent = `${route}departs ${fD(s.home.tz, plan.times.depUtc)}`;
 
   let adjValue; let adjSub;
   if (s.strategy === 'home') { adjValue = 'Home time'; adjSub = 'No shift needed'; }
   else if (out.adjustedDate) {
     adjValue = fDiso(out.adjustedDate);
     adjSub = out.daysToAdjust === 0 ? 'By the time you land' : `${out.daysToAdjust} day${out.daysToAdjust === 1 ? '' : 's'} after landing${s.strategy === 'partial' ? ' (halfway)' : ''}`;
-  } else { adjValue = '—'; adjSub = 'Beyond the trip'; }
+  } else { adjValue = 'After the trip'; adjSub = 'Keep following the plan'; }
   const shiftVal = out.P === 0 ? 'None' : `${fHours(out.P)} ${out.P > 0 ? 'earlier' : 'later'}`;
   $('#stats').innerHTML = [
     ['Time difference', `${raw > 0 ? '+' : raw < 0 ? '−' : ''}${fHours(raw)}`, Math.abs(raw) < 0.01 ? 'Same time zone' : `${esc(shortName(s.dest))} is ${raw > 0 ? 'ahead' : 'behind'}`],
@@ -689,7 +691,7 @@ function tableHTML(leg, { print = false } = {}) {
   if (showCaf) cols.push('Last caffeine');
   if (showMel) cols.push('Melatonin');
   cols.push('Bedtime');
-  const none = '<span class="none">—</span>';
+  const none = '<span class="none" aria-label="none">·</span>';
   const cell = (label, html, cls = '') => {
     const c = [cls, html ? '' : 'empty'].filter(Boolean).join(' ');
     return `<td data-label="${label}"${c ? ` class="${c}"` : ''}>${html || none}</td>`;
@@ -954,7 +956,7 @@ function fillPrintSheet() {
 
   const strategy = { adjust: 'Fully adjust', home: 'Stay on home time', partial: 'Meet halfway' }[s.strategy];
   const shift = out.P === 0 ? 'None' : `${fHours(out.P)} ${out.P > 0 ? 'earlier' : 'later'}`;
-  const adjusted = s.strategy === 'home' ? 'n/a' : out.adjustedDate ? fDiso(out.adjustedDate) : '—';
+  const adjusted = s.strategy === 'home' ? 'n/a' : out.adjustedDate ? fDiso(out.adjustedDate) : 'after the trip';
 
   const rules = [];
   if (s.strategy === 'home') rules.push(`<b>Home time:</b> sleep about ${bed}–${wake} local; daylight in your home-time daytime.`);

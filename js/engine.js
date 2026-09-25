@@ -78,7 +78,7 @@ export function resolveTimes(input) {
   else if (input.durationMin) arrUtc = depUtc + input.durationMin * MIN;
   else throw new Error('Add an arrival time or a flight duration.');
   const flightMin = (arrUtc - depUtc) / MIN;
-  if (flightMin <= 0) throw new Error('Arrival must be after departure. Check the dates and times — arrival is in destination local time.');
+  if (flightMin <= 0) throw new Error('Arrival must be after departure. Check the dates and times. Arrival is in destination local time.');
   if (flightMin > 40 * 60) throw new Error('That trip takes more than 40 hours door to door. Check the arrival date.');
   let retDepUtc = null;
   let retArrUtc = null;

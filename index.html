@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Meridian · Jet Lag Planner</title>
-  <meta name="description" content="A free, personalised jet lag plan: when to sleep, seek or avoid light, take melatonin and drink coffee — from the days before you fly until your body clock catches up.">
+  <meta name="description" content="A free, personalised jet lag plan: when to sleep, seek or avoid light, take melatonin and drink coffee, from the days before you fly until your body clock catches up.">
   <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0e1424" media="(prefers-color-scheme: dark)">
   <meta property="og:title" content="Meridian · Jet Lag Planner">
@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <script>
     // apply saved theme before paint
@@ -78,9 +78,9 @@
   <section class="hero">
     <div class="wrap hero-inner">
       <div class="hero-copy">
-        <p class="eyebrow">Science-based · Free · No sign-up</p>
+        <p class="eyebrow">Jet lag planner</p>
         <h1>Land on local time.</h1>
-        <p class="lead">A personal jet lag plan that tells you exactly when to sleep, when to find bright light and when to hide from it — plus melatonin and caffeine timing. It starts a few days before you fly and runs until your body clock catches up.</p>
+        <p class="lead">A personal jet lag plan that tells you exactly when to sleep, when to find bright light and when to hide from it, plus melatonin and caffeine timing. It starts a few days before you fly and runs until your body clock catches up.</p>
         <ul class="hero-points">
           <li><svg class="ic"><use href="#i-sun"/></svg> Light windows checked against real sunrise &amp; sunset</li>
           <li><svg class="ic"><use href="#i-plane"/></svg> In-flight sleep plan</li>
@@ -89,22 +89,14 @@
         </ul>
       </div>
       <figure class="hero-art" aria-hidden="true">
-        <svg viewBox="0 0 400 220" class="hero-svg">
-          <defs>
-            <linearGradient id="sky" x1="0" x2="1" y1="0" y2="0">
-              <stop offset="0" class="sky-a"/><stop offset=".5" class="sky-b"/><stop offset="1" class="sky-c"/>
-            </linearGradient>
-          </defs>
-          <rect x="0" y="0" width="400" height="220" rx="18" fill="url(#sky)"/>
-          <g class="hero-grid">
-            <line x1="50" y1="18" x2="50" y2="202"/><line x1="100" y1="18" x2="100" y2="202"/><line x1="150" y1="18" x2="150" y2="202"/>
-            <line x1="200" y1="18" x2="200" y2="202"/><line x1="250" y1="18" x2="250" y2="202"/><line x1="300" y1="18" x2="300" y2="202"/><line x1="350" y1="18" x2="350" y2="202"/>
-          </g>
-          <path d="M20 170 C 110 30, 290 30, 380 170" class="hero-path"/>
-          <circle cx="92" cy="92" r="16" class="hero-sun"/>
-          <path d="M318 78a18 18 0 1 0 14 26 14 14 0 1 1-14-26z" class="hero-moon"/>
-          <g transform="translate(196 44) rotate(8)" class="hero-plane"><path d="M-14 3 -2 2 6-7c2-2 5-2.5 6-1.5s.5 4-1.5 6L2 5l1 12-3 2-4-11-10 .5-2 3-3-1 1.5-5-1.5-4.5 3-1z"/></g>
-        </svg>
+        <div class="board">
+          <div class="board-head"><span>ORD → HND</span><span>Day 2 · Tokyo time</span></div>
+          <div class="board-row"><span class="when">07:00</span><span>Wake up</span><span class="tag">sleep</span></div>
+          <div class="board-row"><span class="when">17:00</span><span>Last coffee</span><span class="tag">caffeine</span></div>
+          <div class="board-row"><span class="when">19:00</span><span>Bright light until 23:00</span><span class="tag tag-light">light</span></div>
+          <div class="board-row"><span class="when">23:00</span><span>Lights out</span><span class="tag">sleep</span></div>
+          <div class="board-foot">Body clock: 7.5 h to go · on track</div>
+        </div>
       </figure>
     </div>
   </section>
@@ -185,7 +177,7 @@
         </fieldset>
 
         <fieldset class="group">
-          <legend>Coming back? <span class="legend-hint">optional — improves the strategy and adds a return plan</span></legend>
+          <legend>Coming back? <span class="legend-hint">optional; improves the strategy and adds a return plan</span></legend>
           <div class="grid-2">
             <div class="field">
               <label for="ret-date">Return date</label>
@@ -449,7 +441,7 @@
 
   <footer class="site-footer">
     <div class="wrap footer-inner">
-      <p><strong>Meridian</strong> — a free jet lag planner. Calculations run entirely in your browser.</p>
+      <p><strong>Meridian</strong> is a free jet lag planner. Calculations run entirely in your browser.</p>
       <p class="muted">For general information only, not medical advice. Based on CDC and AASM guidance (<a href="#references">see references</a>). Melatonin is a dietary supplement and not FDA-regulated.</p>
     </div>
   </footer>
