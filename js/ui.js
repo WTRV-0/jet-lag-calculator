@@ -425,7 +425,7 @@ function habitsHTML(plan) {
   items.push(['water', 'Drink water; go easy on alcohol.']);
   const legs = [plan.out, plan.ret].filter(Boolean);
   if (legs.some((l) => l.seek.some((w) => w.light === 'dark' || w.light === 'mixed'))) {
-    items.push(['sun', 'Light windows in the dark: bright room lights are enough. A light box is optional; if you use one, check with your doctor first (eye conditions, migraines, bipolar disorder, light-sensitising medicines).']);
+    items.push(['sun', 'Light windows after dark: any bright light works. A light box is optional; if you use one, check with your doctor first (eye conditions, migraines, bipolar disorder, light-sensitising medicines).']);
   }
   return items.map(([ic, t]) => `<li>${icon(ic)}<span>${esc(t)}</span></li>`).join('');
 }
@@ -646,10 +646,10 @@ function lightNote(w, tz, kind) {
   if (kind === 'seek') {
     if (w.light === 'flight') return 'Reading light on, window shade up if it\'s light outside.';
     if (w.light === 'sun') return 'Get outside. Daylight beats indoor light, even when cloudy.';
-    if (w.light === 'dark') return 'It\'s dark out: keep the room lights bright. You don\'t need to stare at anything; just be in a well-lit room.';
+    if (w.light === 'dark') return 'It\'s dark out: stay in bright light.';
     if (w.light === 'mixed') {
-      if (w.sunrise > w.start && w.sunrise < w.end) return `Bright room lights until sunrise (${fT(tz, w.sunrise)}), then get outside.`;
-      if (w.sunset > w.start && w.sunset < w.end) return `Get outside until sunset (${fT(tz, w.sunset)}), then keep the room lights bright.`;
+      if (w.sunrise > w.start && w.sunrise < w.end) return `Bright light until sunrise (${fT(tz, w.sunrise)}), then get outside.`;
+      if (w.sunset > w.start && w.sunset < w.end) return `Get outside until sunset (${fT(tz, w.sunset)}), then stay in bright light.`;
     }
     return 'Get outside, or sit by a bright window.';
   }
@@ -664,10 +664,10 @@ function shortLight(w, tz, kind) {
   if (kind === 'seek') {
     if (w.light === 'flight') return 'cabin light';
     if (w.light === 'sun') return 'outside';
-    if (w.light === 'dark') return 'bright indoor light';
+    if (w.light === 'dark') return 'bright light';
     if (w.light === 'mixed') {
-      if (w.sunrise > w.start && w.sunrise < w.end) return `indoor light, outside after ${fT(tz, w.sunrise)}`;
-      if (w.sunset > w.start && w.sunset < w.end) return `outside until ${fT(tz, w.sunset)}, then indoor light`;
+      if (w.sunrise > w.start && w.sunrise < w.end) return `bright light, outside after ${fT(tz, w.sunrise)}`;
+      if (w.sunset > w.start && w.sunset < w.end) return `outside until ${fT(tz, w.sunset)}, then bright light`;
     }
     return 'outside';
   }
