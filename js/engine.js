@@ -221,7 +221,7 @@ function buildLeg(o) {
     const date = addDaysISO(arrDate, d);
     let start = nightStart(dest.tz, date, destBed);
     const end = nightEnd(dest.tz, date, destBed, sleepLen / MIN);
-    if (start >= legEnd - (hardEnd != null ? airportBuffer : 0)) break;
+    if (start >= legEnd + (hardEnd != null ? -airportBuffer : 12 * HOUR)) break;
     if (end <= arrUtc + 30 * MIN) continue;
     if (start < arrUtc + 45 * MIN) {
       start = up(arrUtc + 45 * MIN);
@@ -348,7 +348,7 @@ function buildLeg(o) {
   const lastDate = localDateISO(dest.tz, legEnd - 1);
   let n = 0;
   for (let date = arrDate; daysBetweenISO(date, lastDate) >= 0 && n <= MAX_POST_DAYS; date = addDaysISO(date, 1), n++) {
-    if (hardEnd != null && localMidnight(dest.tz, date) >= hardEnd - 3 * HOUR) break;
+    if (hardEnd != null && daysBetweenISO(date, localDateISO(dest.tz, hardEnd)) <= 0) break; // the return leg covers that day
     addRow(n === 0 ? 'arrival' : 'post', dest.tz, dest, date, { index: n + 1 });
   }
 
@@ -358,7 +358,7 @@ function buildLeg(o) {
     let best = null;
     for (const s of sleeps) {
       const m = (s.start + s.end) / 2;
-      if (Math.abs(m - midnight) < 8 * HOUR && (!best || Math.abs(m - midnight) < Math.abs(best - midnight))) best = m;
+      if (Math.abs(m - midnight) < 12 * HOUR && (!best || Math.abs(m - midnight) < Math.abs(best - midnight))) best = m;
     }
     return best ?? midnight;
   };

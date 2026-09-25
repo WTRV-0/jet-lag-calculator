@@ -369,6 +369,8 @@ input[aria-invalid="true"] { border-color: var(--bad); }
 .fr-ic { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px; color: var(--ink-2); }
 .flight-row small { display: inline; }
 .sched tr.adjusted-row th small { color: var(--good); }
+.table-key { margin: 10px 0 0; font-size: .82rem; color: var(--muted); }
+.table-key b { color: var(--ink-2); font-weight: 600; }
 .sched tr.adjusted-row td { color: var(--ink-2); }
 @media (max-width: 719px) {
   /* stack each day into a compact block on phones */
@@ -383,6 +385,7 @@ input[aria-invalid="true"] { border-color: var(--bad); }
   .sched tr.flight-row td { padding: 8px 10px; border-radius: 10px; }
   .sched tr.flight-row td::before, .sched tr.adjusted-row td::before { content: none; }
   .sched tr.adjusted-row td { margin-top: 4px; }
+  .sched td.empty { display: none; }
 }
 .sw { width: 26px; height: 12px; border-radius: 4px; flex: none; display: inline-block; }
 .sw-sleep { background: var(--sleep); }
@@ -597,6 +600,7 @@ a.ref:hover { text-decoration: underline; }
 #print-sheet .sched tbody th { min-width: 0; }
 #print-sheet .sched small { font-size: 7.5pt; }
 #print-sheet .sched tr { break-inside: avoid; }
+#print-sheet .table-key { font-size: 7.5pt; margin-top: 4px; }
 #print-sheet .sched tr.flight-row td { font-size: 8.3pt; padding: 3px 6px; }
 #print-sheet .fr-ic { width: 16px; height: 16px; margin-right: 3px; }
 #print-sheet .timeline { margin-top: 0; }
