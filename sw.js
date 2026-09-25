@@ -1,5 +1,5 @@
 // Offline support: app shell is cached; same-origin requests are stale-while-revalidate.
-const VERSION = 'meridian-v1';
+const VERSION = 'meridian-v2';
 const SHELL = [
   './', 'index.html', 'css/styles.css', 'js/ui.js', 'js/engine.js', 'js/tz.js', 'js/sun.js',
   'js/cities.js', 'js/ics.js', 'manifest.webmanifest', 'icons/favicon.svg', 'icons/icon-192.png',

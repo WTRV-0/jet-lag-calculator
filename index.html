@@ -260,7 +260,7 @@
           <div class="results-actions">
             <button type="button" class="btn btn-soft" id="ics-btn"><svg class="ic"><use href="#i-cal"/></svg> Add to calendar</button>
             <button type="button" class="btn btn-soft" id="share-btn"><svg class="ic"><use href="#i-link"/></svg> <span>Copy link</span></button>
-            <button type="button" class="btn btn-soft" id="print-btn"><svg class="ic"><use href="#i-print"/></svg> Print</button>
+            <button type="button" class="btn btn-soft" id="print-btn"><svg class="ic"><use href="#i-print"/></svg> Print summary</button>
           </div>
         </div>
 
@@ -296,7 +296,7 @@
         <section class="card timeline-card" aria-labelledby="timeline-title">
           <div class="timeline-head">
             <h3 id="timeline-title" class="card-title-sm">Timeline</h3>
-            <p class="card-sub">Each row runs midnight to midnight on the clock you're living by that day.</p>
+            <p class="card-sub">Each row runs midnight to midnight on the clock you're living by that day. Times for every block are listed under its bar.</p>
           </div>
           <div id="timeline" class="timeline"></div>
         </section>
@@ -417,6 +417,7 @@
     </div>
   </footer>
 
+  <section id="print-sheet" aria-hidden="true"></section>
   <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <noscript><p class="wrap">Meridian needs JavaScript to calculate your plan.</p></noscript>

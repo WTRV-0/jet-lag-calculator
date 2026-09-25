@@ -380,8 +380,7 @@ function strategyCallout(plan, stratName) {
   const tripN = s.tripDays != null ? Math.max(1, Math.round(s.tripDays)) : null;
   const trip = tripN != null ? `${tripN} day${tripN === 1 ? '' : 's'}` : null;
   let title; let body; let ic = 'sun';
-  const destBed = fT('UTC', Date.UTC(2000, 0, 1) + ((((plan.input.bed + norm12(out.oD - out.T) * 60) % 1440) + 1440) % 1440) * MIN);
-  const destWake = fT('UTC', Date.UTC(2000, 0, 1) + ((((plan.input.wake + norm12(out.oD - out.T) * 60) % 1440) + 1440) % 1440) * MIN);
+  const [destBed, destWake] = targetSleep(plan);
   if (s.strategy === 'home') {
     ic = 'home';
     title = 'Stay on home time';
@@ -416,6 +415,13 @@ function strategyCallout(plan, stratName) {
     body += `<p class="muted">Chosen automatically${tripN != null ? ` for your ${tripN}-day stay` : ''}.${s.tripDays == null ? ' Add a return date and the planner can decide whether a short trip is better spent on home time.' : ''}</p>`;
   }
   return `<div class="card callout"><span class="ic-wrap">${icon(ic)}</span><div><h3>${esc(title || stratName)}</h3>${body}</div></div>`;
+}
+
+// Recommended sleep window at the destination, on the destination clock
+function targetSleep(plan) {
+  const out = plan.out;
+  const clock = (m) => fT('UTC', Date.UTC(2000, 0, 1) + ((((m + norm12(out.oD - out.T) * 60) % 1440) + 1440) % 1440) * MIN);
+  return [clock(plan.input.bed), clock(plan.input.wake)];
 }
 
 function renderEvent() {
@@ -506,39 +512,87 @@ function renderProgress(leg) {
 
 // ---- timeline -------------------------------------------------------------
 function renderTimeline(leg) {
+  $('#timeline').innerHTML = timelineHTML(leg);
+}
+
+// One row per day. Under each bar, a list of every colored section with its start and stop
+// time (each item listed once, on the day it starts), so the times are readable on screen and on paper.
+function timelineHTML(leg, { print = false } = {}) {
   const { rows, collapsed } = visibleRows(leg);
   const ticks = [0, 3, 6, 9, 12, 15, 18, 21, 24];
   const tickLabel = (h) => (prefs.clock24 ? String(h % 24).padStart(2, '0') : (h % 12 === 0 ? (h % 24 === 0 ? '12a' : '12p') : `${h % 12}${h < 12 ? 'a' : 'p'}`));
-  let html = `<div class="tl-scale"><div></div><div class="tl-ticks">${ticks.map((h) => `<span style="left:${(h / 24) * 100}%">${tickLabel(h)}</span>`).join('')}</div></div>`;
+  const scale = `<div class="tl-scale"><div></div><div class="tl-ticks">${ticks.map((h) => `<span style="left:${(h / 24) * 100}%">${tickLabel(h)}</span>`).join('')}</div></div>`;
+  let html = scale;
   const now = Date.now();
-  for (const r of rows) {
+  const listed = new Set();
+  const ev = leg.leg === 'out' ? state.plan.event : null;
+  rows.forEach((r, ri) => {
     const span = r.end - r.start;
     const pct = (t) => `${(((Math.min(Math.max(t, r.start), r.end) - r.start) / span) * 100).toFixed(3)}%`;
-    const seg = (cls, a, b, tip) => {
+    const seg = (cls, a, b, tip, k) => {
       if (b <= r.start || a >= r.end) return '';
-      return `<span class="tl-seg ${cls}" style="left:${pct(a)};width:calc(${pct(b)} - ${pct(a)})" ${tip ? `data-tip="${esc(tip)}"` : ''}></span>`;
+      return `<span class="tl-seg ${cls}" style="left:${pct(a)};width:calc(${pct(b)} - ${pct(a)})"${tip ? ` data-tip="${esc(tip)}"` : ''}${k ? ` data-k="${k}"` : ''}></span>`;
+    };
+    const items = [];
+    const item = (k, t, sw, label, range) => {
+      if (listed.has(k)) return;
+      if (t < r.start) range = `until ${range.split('–').pop()}`; // began the day before
+      listed.add(k);
+      items.push({ k, t, sw, label, range });
     };
     let inner = '';
     if (r.sun && r.sun.rise) inner += seg('tl-day', Math.max(r.sun.rise, r.visStart), Math.min(r.sun.set, r.visEnd), `Daylight ${fRange(r.tz, r.sun.rise, r.sun.set)}`);
     else if (r.sun && r.sun.polar === 'day') inner += seg('tl-day', r.visStart, r.visEnd, 'Midnight sun: daylight all day');
     if (r.visStart > r.start) inner += seg('tl-off', r.start, r.visStart, 'Before this leg');
     if (r.visEnd < r.end) inner += seg('tl-off', r.visEnd, r.end, 'You\'re at your destination by now; see the next row');
-    if (r.flight) inner += seg('tl-flight', r.flight.start, r.flight.end, `In flight ${fRange(r.tz, leg.depUtc, leg.arrUtc)}`);
-    for (const w of r.sleeps) inner += seg('tl-sleep', w.start, w.end, `Sleep ${fRange(r.tz, w.rawStart, w.rawEnd)}`);
-    for (const w of r.flightSleeps) inner += seg('tl-sleep flight-sleep', w.start, w.end, `Sleep on the plane ${fRange(r.tz, w.rawStart, w.rawEnd)}`);
-    for (const w of r.seek) inner += seg('tl-seek', w.start, w.end, `Seek bright light ${fRange(r.tz, w.rawStart, w.rawEnd)}`);
-    for (const w of r.avoid) inner += seg('tl-avoid', w.start, w.end, `Avoid bright light ${fRange(r.tz, w.rawStart, w.rawEnd)}`);
-    for (const m of r.melatonin) inner += `<span class="tl-mel" style="left:${pct(m.at)}" data-tip="${esc(`Melatonin ${fT(r.tz, m.at)}`)}"></span>`;
-    const ev = state.plan.event;
-    if (ev && ev.eventUtc >= r.visStart && ev.eventUtc < r.visEnd && leg.leg === 'out') inner += `<span class="tl-event" style="left:${pct(ev.eventUtc)}" data-tip="${esc(`Your event ${fT(r.tz, ev.eventUtc)}`)}"></span>`;
-    if (now >= r.visStart && now < r.visEnd) inner += `<span class="tl-now" style="left:${pct(now)}" data-tip="${esc(`Now · ${fT(r.tz, now)}`)}"></span>`;
+    if (r.flight) {
+      inner += seg('tl-flight', r.flight.start, r.flight.end, `In flight ${fRange(r.tz, leg.depUtc, leg.arrUtc)}`, 'fl');
+      if (r.kind === 'departure') item('fl', leg.depUtc, 'flight', 'Flight', `departs ${fT(r.tz, leg.depUtc)}`);
+      if (r.kind === 'arrival') item('fla', leg.arrUtc, 'flight', 'Flight', `lands ${fT(r.tz, leg.arrUtc)}`);
+    }
+    for (const w of r.sleeps) {
+      const k = 's' + w.rawStart;
+      inner += seg('tl-sleep', w.start, w.end, `Sleep ${fRange(r.tz, w.rawStart, w.rawEnd)}`, k);
+      item(k, w.rawStart, 'sleep', 'Sleep', fRange(r.tz, w.rawStart, w.rawEnd));
+    }
+    for (const w of r.flightSleeps) {
+      const k = 'f' + w.rawStart;
+      inner += seg('tl-sleep flight-sleep', w.start, w.end, `Sleep on the plane ${fRange(r.tz, w.rawStart, w.rawEnd)}`, k);
+      item(k, w.rawStart, 'sleep', 'Plane sleep', fRange(r.tz, w.rawStart, w.rawEnd));
+    }
+    for (const w of r.seek) {
+      const k = 'l' + w.rawStart;
+      inner += seg('tl-seek', w.start, w.end, `Seek bright light ${fRange(r.tz, w.rawStart, w.rawEnd)}`, k);
+      item(k, w.rawStart, 'seek', 'Seek light', fRange(r.tz, w.rawStart, w.rawEnd));
+    }
+    for (const w of r.avoid) {
+      const k = 'a' + w.rawStart;
+      inner += seg('tl-avoid', w.start, w.end, `Avoid bright light ${fRange(r.tz, w.rawStart, w.rawEnd)}`, k);
+      item(k, w.rawStart, 'avoid', 'Avoid light', fRange(r.tz, w.rawStart, w.rawEnd));
+    }
+    for (const m of r.melatonin) {
+      const k = 'm' + m.at;
+      inner += `<span class="tl-mel" style="left:${pct(m.at)}" data-tip="${esc(`Melatonin ${fT(r.tz, m.at)}`)}" data-k="${k}"></span>`;
+      item(k, m.at, 'mel', 'Melatonin', fT(r.tz, m.at));
+    }
+    if (ev && ev.eventUtc >= r.visStart && ev.eventUtc < r.visEnd) {
+      inner += `<span class="tl-event" style="left:${pct(ev.eventUtc)}" data-tip="${esc(`Your event ${fT(r.tz, ev.eventUtc)}`)}" data-k="ev"></span>`;
+      item('ev', ev.eventUtc, 'event', 'Event', fT(r.tz, ev.eventUtc));
+    }
+    if (!print && now >= r.visStart && now < r.visEnd) inner += `<span class="tl-now" style="left:${pct(now)}" data-tip="${esc(`Now · ${fT(r.tz, now)}`)}"></span>`;
+    items.sort((a, b) => a.t - b.t);
+    const chips = items.map((it) => `<li data-k="${it.k}"><i class="sw sw-${it.sw}" aria-hidden="true"></i><span class="tl-chip-l">${it.label}</span> <b>${esc(it.range)}</b></li>`).join('');
     html += `<div class="tl-row${r.adjusted && r.kind === 'post' ? ' adjusted' : ''}">
-      <div class="tl-label"><span class="tl-date">${esc(fDiso(r.date))}</span><span class="tl-kind">${esc(kindLabel(r))} · ${esc(shortName(r.place))}</span></div>
-      <div class="tl-track" role="img" aria-label="${esc(`${fDiso(r.date)} ${kindLabel(r)} timeline; details in the day cards below`)}">${inner}</div>
+      <div class="tl-label"><span class="tl-date">${esc(fDiso(r.date))}</span><span class="tl-kind">${esc(kindLabel(r))}</span><span class="tl-kind tl-clock">${esc(shortName(r.place))} time</span></div>
+      <div class="tl-main">
+        <div class="tl-track" aria-hidden="true">${inner}</div>
+        ${chips ? `<ul class="tl-chips" aria-label="${esc(`${fDiso(r.date)} times`)}">${chips}</ul>` : ''}
+      </div>
     </div>`;
-  }
+    if (!print && ri > 0 && ri % 7 === 6 && ri < rows.length - 1) html += scale;
+  });
   if (collapsed.length) html += `<p class="tl-more">+ ${collapsed.length} more day${collapsed.length === 1 ? '' : 's'} on a normal local routine</p>`;
-  $('#timeline').innerHTML = html;
+  return html;
 }
 
 // ---- day cards ------------------------------------------------------------
@@ -805,6 +859,68 @@ function renderNow() {
 }
 
 // ---------------------------------------------------------------------------
+// Print summary: header, key facts, a few rules, and the timeline(s) with times
+
+function fillPrintSheet() {
+  const sheet = $('#print-sheet');
+  const plan = state.plan;
+  document.body.classList.toggle('has-print-sheet', !!plan);
+  if (!plan) { sheet.innerHTML = ''; return; }
+  const s = plan.summary;
+  const out = plan.out;
+  const ret = plan.ret;
+  const from = shortName(s.home);
+  const to = shortName(s.dest);
+  const raw = s.oD - s.oH;
+  const [bed, wake] = targetSleep(plan);
+  const leg = (l) => `${fD(l.origin.tz, l.depUtc)}, <b>${fT(l.origin.tz, l.depUtc)}</b> ${esc(shortName(l.origin))} → ${fD(l.dest.tz, l.arrUtc)}, <b>${fT(l.dest.tz, l.arrUtc)}</b> ${esc(shortName(l.dest))} (${fDur((l.arrUtc - l.depUtc) / MIN)})`;
+
+  const strategy = { adjust: 'Fully adjust', home: 'Stay on home time', partial: 'Meet halfway' }[s.strategy];
+  const shift = out.P === 0 ? 'None' : `${fHours(out.P)} ${out.P > 0 ? 'earlier' : 'later'}`;
+  let adjusted = '—';
+  if (s.strategy === 'home') adjusted = 'n/a (home time)';
+  else if (out.adjustedDate) adjusted = fDiso(out.adjustedDate);
+
+  const rules = [];
+  if (s.strategy === 'home') rules.push(`<b>Stay on home time:</b> sleep about ${bed}–${wake} ${esc(to)} time; daylight in your home-time daytime, dim light in your home-time night.`);
+  else if (out.dir === 'advance') rules.push(`<b>Shift ${fHours(out.P)} earlier:</b> bright light in the morning windows, dim light in the evenings.`);
+  else if (out.dir === 'delay') rules.push(`<b>Shift ${fHours(out.P)} later:</b> bright light in the evening windows, dim light in the mornings.${out.choice.flipped ? ' (Long way round: the usual eastbound rule flips.)' : ''}`);
+  if (out.prep) rules.push(`<b>Before you fly</b> (from ${fDiso(out.rows[0].date)}): go to bed and get up about 1 h ${out.P > 0 ? 'earlier' : 'later'} each day.`);
+  const fs = out.flightSleeps.map((w) => fRange(s.dest.tz, w.start, w.end));
+  rules.push(`<b>On the plane:</b> switch to ${esc(to)} time; ${fs.length ? `sleep ${fs.join(' and ')}` : 'stay awake if you can'}. Water yes; go easy on alcohol and caffeine.`);
+  if (s.strategy !== 'home') rules.push(`<b>After landing:</b> sleep ${bed}–${wake}; stay up until bedtime on day one; naps 20–30 min max.`);
+  const extras = [];
+  if (plan.input.melatonin && out.melatonin.length) extras.push('melatonin 0.5–3 mg 30–60 min before bed where marked (optional; ask your doctor)');
+  if (plan.input.caffeine) extras.push('no caffeine within 8 h of bedtime');
+  if (extras.length) rules.push(`<b>Also:</b> ${extras.join('; ')}.`);
+  if (plan.event) rules.push(`<b>Event</b> ${fD(s.dest.tz, plan.event.eventUtc)} ${fT(s.dest.tz, plan.event.eventUtc)}: body clock will read ~${fBodyClock(plan.event.bodyHour)} (${plan.event.label.text.toLowerCase()}). Bright light and coffee 30–60 min before help.`);
+
+  const legend = `<ul class="ps-legend">
+    <li><i class="sw sw-sleep"></i>Sleep</li><li><i class="sw sw-seek"></i>Seek bright light</li><li><i class="sw sw-avoid"></i>Avoid bright light</li>
+    <li><i class="sw sw-flight"></i>In flight</li><li><i class="sw sw-mel"></i>Melatonin</li><li><i class="sw sw-day"></i>Daylight</li></ul>`;
+  const url = location.href.split('#')[0];
+
+  sheet.innerHTML = `
+    <header class="ps-head">
+      <div><h1>${esc(from)} → ${esc(to)}</h1></div>
+      <div class="ps-brand">Jet lag plan · Meridian<br>printed ${fD(s.home.tz, Date.now())}</div>
+    </header>
+    <ul class="ps-flights"><li>Outbound: ${leg(out)}</li>${ret ? `<li>Return: ${leg(ret)}</li>` : ''}</ul>
+    <dl class="ps-facts">
+      <div><dt>Time difference</dt><dd>${raw > 0 ? '+' : raw < 0 ? '−' : ''}${fHours(raw)}</dd></div>
+      <div><dt>Body-clock shift</dt><dd>${shift}</dd></div>
+      <div><dt>Strategy</dt><dd>${strategy}</dd></div>
+      <div><dt>Adjusted by</dt><dd>${adjusted}</dd></div>
+    </dl>
+    <ul class="ps-rules">${rules.map((r) => `<li>${r}</li>`).join('')}</ul>
+    <h2 class="ps-section">Outbound: ${esc(from)} → ${esc(to)} <small>times are on the local clock shown for each day</small></h2>
+    ${legend}
+    <div class="timeline">${timelineHTML(out, { print: true })}</div>
+    ${ret ? `<section class="ps-leg"><h2 class="ps-section">Return: ${esc(to)} → ${esc(from)}</h2><div class="timeline">${timelineHTML(ret, { print: true })}</div></section>` : ''}
+    <p class="ps-foot">Full plan with reasons and tips: <a href="${esc(url)}">${esc(url)}</a><br>General guidance, not medical advice. Melatonin is a supplement and not FDA-regulated.</p>`;
+}
+
+// ---------------------------------------------------------------------------
 // Build / share / export
 
 function paramsString(v) {
@@ -949,7 +1065,12 @@ function init() {
   $('#example-btn').addEventListener('click', fillExample);
   $('#share-btn').addEventListener('click', share);
   $('#ics-btn').addEventListener('click', downloadIcs);
-  $('#print-btn').addEventListener('click', () => window.print());
+  $('#print-btn').addEventListener('click', () => { fillPrintSheet(); window.print(); });
+  addEventListener('beforeprint', fillPrintSheet);
+  // hovering a time in the list highlights its block on the bar (and vice versa)
+  const hl = (k, on) => $$(`#timeline [data-k="${k}"]`).forEach((n) => n.classList.toggle('hl', on));
+  $('#timeline').addEventListener('pointerover', (e) => { const n = e.target.closest('[data-k]'); if (n) hl(n.dataset.k, true); });
+  $('#timeline').addEventListener('pointerout', (e) => { const n = e.target.closest('[data-k]'); if (n) hl(n.dataset.k, false); });
   $('#leg-tabs').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-leg]');
     if (!b) return;

@@ -96,6 +96,13 @@ function nightStart(tz, dateISO, bedMin) {
   return zonedToUtc(tz, dateISO, b);
 }
 
+// End of that night's sleep on the wall clock (so a DST change overnight still wakes you at the usual time)
+function nightEnd(tz, dateISO, bedMin, sleepMin) {
+  let b = mod(Math.round(bedMin), 1440);
+  if (b < 12 * 60) b += 1440;
+  return zonedToUtc(tz, dateISO, b + sleepMin);
+}
+
 function roundHalf(x) {
   return Math.round(x * 2) / 2;
 }
@@ -133,7 +140,7 @@ function buildLeg(o) {
     const date = addDaysISO(depDate, -prep + j);
     const shiftH = sign * Math.min(j + 1, Math.abs(P));
     const start = nightStart(origin.tz, date, originBed - shiftH * 60);
-    let end = start + sleepLen;
+    let end = nightEnd(origin.tz, date, originBed - shiftH * 60, sleepLen / MIN);
     if (start >= depUtc - airportBuffer) continue;
     end = Math.min(end, down(depUtc - airportBuffer));
     if (end - start < 2 * HOUR) continue;
@@ -152,7 +159,7 @@ function buildLeg(o) {
   for (let d = -1; d <= daysBetweenISO(localDateISO(dest.tz, depUtc), arrDate) + 1; d++) {
     const date = addDaysISO(localDateISO(dest.tz, depUtc), d);
     const s = nightStart(dest.tz, date, destBed);
-    const e = s + sleepLen;
+    const e = nightEnd(dest.tz, date, destBed, sleepLen / MIN);
     const a = Math.max(s, fStart);
     const b = Math.min(e, fEnd);
     if (b - a >= 60 * MIN) flightSleeps.push({ start: a, end: b, place: 'flight' });
@@ -200,7 +207,7 @@ function buildLeg(o) {
   for (let d = -1; ; d++) {
     const date = addDaysISO(arrDate, d);
     let start = nightStart(dest.tz, date, destBed);
-    const end = start + sleepLen;
+    const end = nightEnd(dest.tz, date, destBed, sleepLen / MIN);
     if (start >= legEnd - (hardEnd != null ? airportBuffer : 0)) break;
     if (end <= arrUtc + 30 * MIN) continue;
     if (start < arrUtc + 45 * MIN) {

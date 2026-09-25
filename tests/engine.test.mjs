@@ -252,6 +252,14 @@ test('calendar export is valid iCalendar', () => {
   assert.ok(begins > 10);
 });
 
+test('a DST change overnight still wakes you at your usual local time', () => {
+  const p = plan('london-united-kingdom', 'new-york-united-states', '2026-10-28', '10:00', '2026-10-28', '13:00');
+  const night = p.out.sleeps.find((s) => localDateISO('America/New_York', s.end) === '2026-11-01');
+  assert.ok(night, 'has the night US clocks go back');
+  assert.equal(localMinutes('America/New_York', night.end), 7 * 60);
+  assert.equal(localMinutes('America/New_York', night.start), 23 * 60);
+});
+
 test('invalid input gives a helpful error', () => {
   assert.throws(() => plan('new-york-united-states', 'london-united-kingdom', '2026-10-10', '19:00', '2026-10-10', '07:00'), /after departure/);
 });
