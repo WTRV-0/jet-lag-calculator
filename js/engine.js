@@ -345,6 +345,13 @@ function buildLeg(o) {
   };
   for (let j = 0; j < prep; j++) addRow('prep', origin.tz, origin, addDaysISO(depDate, -prep + j), { index: j + 1, of: prep });
   addRow('departure', origin.tz, origin, depDate);
+  // a destination date spent entirely in the air (e.g. crossing the date line) gets its own timeline row
+  {
+    const depDayEnd = localMidnight(origin.tz, addDaysISO(depDate, 1));
+    for (let date = localDateISO(dest.tz, Math.min(depDayEnd, arrUtc)); daysBetweenISO(date, arrDate) > 0; date = addDaysISO(date, 1)) {
+      addRow('inflight', dest.tz, dest, date);
+    }
+  }
   const lastDate = localDateISO(dest.tz, legEnd - 1);
   let n = 0;
   for (let date = arrDate; daysBetweenISO(date, lastDate) >= 0 && n <= MAX_POST_DAYS; date = addDaysISO(date, 1), n++) {
@@ -369,11 +376,16 @@ function buildLeg(o) {
   const clip = (arr, a, b) => arr.filter((w) => w.end > a && w.start < b)
     .map((w) => ({ ...w, start: Math.max(w.start, a), end: Math.min(w.end, b), rawStart: w.start, rawEnd: w.end }));
   const pts = (arr, a, b) => arr.filter((p) => inRange(p.at, a, b));
+  // The arrival row picks up where the departure row stops, so no stretch of time is drawn twice
+  // (eastward, the destination's day starts before the origin's day ends).
+  const depRow = rows.find((x) => x.kind === 'departure');
+  const depRowEnd = depRow ? Math.min(depRow.end, arrUtc) : depUtc;
   for (const r of rows) {
-    r.visStart = r.kind === 'arrival' ? Math.max(r.start, depUtc) : r.start;
-    r.visEnd = r.kind === 'departure' ? Math.min(r.end, arrUtc) : r.end;
-    r.ownStart = r.kind === 'arrival' ? Math.max(r.start, arrUtc) : nightBoundary(r.start);
-    r.ownEnd = r.kind === 'departure' ? Math.min(r.end, depUtc) : nightBoundary(r.end);
+    const afterDeparture = r.kind === 'arrival' || r.kind === 'inflight';
+    r.visStart = afterDeparture ? Math.max(r.start, depRowEnd) : r.start;
+    r.visEnd = r.kind === 'departure' || r.kind === 'inflight' ? Math.min(r.end, arrUtc) : r.end;
+    r.ownStart = r.kind === 'arrival' ? Math.max(r.start, arrUtc) : r.kind === 'inflight' ? r.visStart : nightBoundary(r.start);
+    r.ownEnd = r.kind === 'departure' ? Math.min(r.end, depUtc) : r.kind === 'inflight' ? r.visStart : nightBoundary(r.end);
     const mid = r.kind === 'departure' ? Math.min(depUtc, (r.start + r.end) / 2) : Math.max(r.start + 12 * HOUR, r.kind === 'arrival' ? arrUtc : 0);
     r.bodyZone = bodyZoneAt(mid);
     r.localZone = offsetHours(r.tz, mid);

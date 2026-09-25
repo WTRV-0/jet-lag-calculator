@@ -282,6 +282,27 @@ test('caffeine cut-off is 6 h before bed (CDC)', () => {
   for (const c of p.out.caffeine) assert.equal(c.bed - c.at, 6 * 3600000);
 });
 
+test('the timeline draws each flight exactly once, whatever the direction', () => {
+  for (const [a, b, dep, dt, dur] of [
+    ['chicago-united-states', 'warsaw-poland', '2026-10-02', '18:00', 480],
+    ['chicago-united-states', 'tokyo-japan', '2026-10-07', '11:45', 790],
+    ['london-united-kingdom', 'new-york-united-states', '2026-10-10', '10:00', 480],
+    ['los-angeles-united-states', 'sydney-australia', '2026-11-01', '22:30', 870],
+    ['tokyo-japan', 'los-angeles-united-states', '2026-11-01', '17:00', 600],
+    ['new-york-united-states', 'london-united-kingdom', '2026-10-10', '23:55', 420],
+  ]) {
+    const p = buildPlan({ home: city(a), dest: city(b), depDate: dep, depTime: hm(dt), arrDate: null, arrTime: null,
+      durationMin: dur, bed: hm('23:00'), wake: hm('07:00'), retDate: null, prepDays: 3, goal: 'auto', melatonin: true, caffeine: true });
+    const rows = p.out.rows;
+    const drawn = rows.reduce((sum, r) => sum + (r.flight ? r.flight.end - r.flight.start : 0), 0);
+    assert.equal(drawn, dur * 60000, `${a}→${b}: flight drawn ${drawn / 3600000} h for a ${dur / 60} h flight`);
+    for (let i = 1; i < rows.length; i++) assert.ok(rows[i].visStart >= rows[i - 1].visEnd - 1, `${a}→${b}: rows overlap at ${rows[i].date}`);
+    const planeSleep = rows.reduce((sum, r) => sum + r.flightSleeps.reduce((x, w) => x + w.end - w.start, 0), 0);
+    const actual = p.out.flightSleeps.reduce((x, w) => x + w.end - w.start, 0);
+    assert.equal(planeSleep, actual, `${a}→${b}: plane sleep drawn twice`);
+  }
+});
+
 test('invalid input gives a helpful error', () => {
   assert.throws(() => plan('new-york-united-states', 'london-united-kingdom', '2026-10-10', '19:00', '2026-10-10', '07:00'), /after departure/);
 });

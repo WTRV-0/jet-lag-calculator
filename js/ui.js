@@ -335,8 +335,8 @@ function toInputQuiet(v) {
 // Plan rendering
 
 const KIND = {
-  out: { prep: (r) => `Prep day ${r.index} of ${r.of}`, departure: () => 'Departure day', arrival: () => 'Arrival day', post: (r) => `Day ${r.index} there` },
-  return: { prep: (r) => `Prep day ${r.index}`, departure: () => 'Return flight', arrival: () => 'Back home', post: (r) => `Home · day ${r.index}` },
+  out: { prep: (r) => `Prep day ${r.index} of ${r.of}`, departure: () => 'Departure day', inflight: () => 'In the air', arrival: () => 'Arrival day', post: (r) => `Day ${r.index} there` },
+  return: { prep: (r) => `Prep day ${r.index}`, departure: () => 'Return flight', inflight: () => 'In the air', arrival: () => 'Back home', post: (r) => `Home · day ${r.index}` },
 };
 const kindLabel = (r) => KIND[r.leg][r.kind](r);
 
@@ -479,7 +479,7 @@ function renderLeg() {
 function renderProgress(leg) {
   const box = $('#progress-chart');
   const sub = $('#progress-sub');
-  const { rows } = visibleRows(leg);
+  const rows = visibleRows(leg).rows.filter((r) => r.kind !== 'inflight'); // the flight line/card covers it
   const target = Math.abs(leg.P);
   if (target < 0.01) {
     sub.textContent = leg.strategy === 'home' ? 'You\'re holding your home clock, so there\'s nothing to shift.' : 'No shift needed on this leg.';
@@ -589,7 +589,7 @@ function timelineHTML(leg, { print = false } = {}) {
     let inner = '';
     if (r.sun && r.sun.rise) inner += seg('tl-day', Math.max(r.sun.rise, r.visStart), Math.min(r.sun.set, r.visEnd), `Daylight ${fRange(r.tz, r.sun.rise, r.sun.set)}`);
     else if (r.sun && r.sun.polar === 'day') inner += seg('tl-day', r.visStart, r.visEnd, 'Midnight sun: daylight all day');
-    if (r.visStart > r.start) inner += seg('tl-off', r.start, r.visStart, 'Before this leg');
+    if (r.visStart > r.start) inner += seg('tl-off', r.start, r.visStart, r.kind === 'arrival' || r.kind === 'inflight' ? 'Shown on the row above' : 'Before this leg');
     if (r.visEnd < r.end) inner += seg('tl-off', r.visEnd, r.end, 'You\'re at your destination by now; see the next row');
     if (r.flight) {
       inner += seg('tl-flight', r.flight.start, r.flight.end, `In flight ${fRange(r.tz, leg.depUtc, leg.arrUtc)}`, 'fl');
@@ -682,7 +682,8 @@ const shiftNote = (h) => (h ? `${fHours(h)} ${h > 0 ? 'earlier' : 'later'} than 
 function tableHTML(leg, { print = false } = {}) {
   const fT = (tz, x) => fTime(tz, x).replace(/ /g, '\u00a0');
   const fRange = (tz, x, y) => `${fT(tz, x)}–<wbr>${fT(tz, y)}`;
-  const { rows, collapsed } = visibleRows(leg);
+  const { rows: allRows, collapsed } = visibleRows(leg);
+  const rows = allRows.filter((r) => r.kind !== 'inflight'); // the flight line/card covers it
   const showMel = leg.melatonin.length > 0;
   const showCaf = state.plan.input.caffeine;
   const cols = ['Day', 'Wake up', 'Bright light', 'Avoid light'];
@@ -846,7 +847,8 @@ function dayCard({ open, kicker, title, zone, body, cls = '' }) {
 }
 
 function renderDays(leg) {
-  const { rows, collapsed } = visibleRows(leg);
+  const { rows: allRows, collapsed } = visibleRows(leg);
+  const rows = allRows.filter((r) => r.kind !== 'inflight'); // the flight line/card covers it
   const now = Date.now();
   // open today's card (or the first one if the trip hasn't started)
   let openIdx = rows.findIndex((r) => now >= r.ownStart && now < r.ownEnd);
