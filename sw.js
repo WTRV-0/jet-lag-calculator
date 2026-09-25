@@ -1,5 +1,5 @@
 // Offline support: network first (so updates show up immediately), cache as the offline fallback.
-const VERSION = 'meridian-v4';
+const VERSION = 'meridian-v5';
 const SHELL = [
   './', 'index.html', 'css/styles.css', 'js/ui.js', 'js/engine.js', 'js/tz.js', 'js/sun.js',
   'js/cities.js', 'js/ics.js', 'manifest.webmanifest', 'icons/favicon.svg', 'icons/icon-192.png',
@@ -25,7 +25,8 @@ self.addEventListener('fetch', (e) => {
   const key = sameOrigin && req.mode === 'navigate' ? 'index.html' : req;
   e.respondWith(caches.open(VERSION).then(async (cache) => {
     try {
-      const res = await fetch(req);
+      // revalidate with the server every time (cheap 304s) so new deploys show up immediately
+      const res = await fetch(req, sameOrigin ? { cache: 'no-cache' } : undefined);
       if (res && (res.ok || res.type === 'opaque')) cache.put(key, res.clone());
       return res;
     } catch {

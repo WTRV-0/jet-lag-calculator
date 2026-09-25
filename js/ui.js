@@ -529,6 +529,37 @@ function renderSchedule(leg) {
   $('#schedule').innerHTML = view === 'timeline' ? timelineHTML(leg) : tableHTML(leg);
 }
 
+// What each calendar-day row lists (used by both the table and the timeline, so they always agree):
+// every item goes on the first row whose drawn range it starts in, and the first row also picks up
+// anything already under way (shown as "until …").
+function calendarItems(leg, rows) {
+  const seen = new Set();
+  const minLen = (w) => w.end - w.start >= 20 * MIN;
+  const lists = {
+    sleep: [...leg.sleeps.map((w) => ({ ...w, plane: false })), ...leg.flightSleeps.map((w) => ({ ...w, plane: true }))],
+    seek: leg.seek.filter(minLen),
+    avoid: leg.avoid.filter(minLen),
+    mel: leg.melatonin.map((m) => ({ start: m.at, end: m.at })),
+    nightMel: leg.nightMelatonin,
+    caf: leg.caffeine.map((c) => ({ start: c.at, end: c.at })),
+  };
+  return rows.map((r, i) => {
+    const out = {};
+    for (const [k, list] of Object.entries(lists)) {
+      out[k] = list.filter((w) => {
+        const key = k + w.start;
+        if (seen.has(key)) return false;
+        const starts = w.start >= r.visStart && w.start < r.visEnd;
+        const carry = i === 0 && w.start < r.visStart && w.end > r.visStart;
+        if (!starts && !carry) return false;
+        seen.add(key);
+        return true;
+      }).map((w) => ({ ...w, carry: w.start < r.visStart })).sort((a, b) => a.start - b.start);
+    }
+    return out;
+  });
+}
+
 // One row per day. Under each bar, a list of every colored section with its start and stop
 // time (each item listed once, on the day it starts), so the times are readable on screen and on paper.
 function timelineHTML(leg, { print = false } = {}) {
@@ -540,6 +571,7 @@ function timelineHTML(leg, { print = false } = {}) {
   const now = Date.now();
   const listed = new Set();
   const ev = leg.leg === 'out' ? state.plan.event : null;
+  const cal = calendarItems(leg, rows);
   rows.forEach((r, ri) => {
     const span = r.end - r.start;
     const pct = (t) => `${(((Math.min(Math.max(t, r.start), r.end) - r.start) / span) * 100).toFixed(3)}%`;
@@ -567,38 +599,39 @@ function timelineHTML(leg, { print = false } = {}) {
     for (const w of r.sleeps) {
       const k = 's' + w.rawStart;
       inner += seg('tl-sleep', w.start, w.end, `Sleep ${fRange(r.tz, w.rawStart, w.rawEnd)}`, k);
-      item(k, w.rawStart, 'sleep', 'Sleep', fRange(r.tz, w.rawStart, w.rawEnd));
     }
     for (const w of r.flightSleeps) {
       const k = 'f' + w.rawStart;
       inner += seg('tl-sleep flight-sleep', w.start, w.end, `Sleep on the plane ${fRange(r.tz, w.rawStart, w.rawEnd)}`, k);
-      item(k, w.rawStart, 'sleep', 'Plane sleep', fRange(r.tz, w.rawStart, w.rawEnd));
     }
     for (const w of r.seek) {
       const k = 'l' + w.rawStart;
       inner += seg('tl-seek', w.start, w.end, `Seek bright light ${fRange(r.tz, w.rawStart, w.rawEnd)}`, k);
-      item(k, w.rawStart, 'seek', 'Seek light', fRange(r.tz, w.rawStart, w.rawEnd));
     }
     for (const w of r.avoid) {
       const k = 'a' + w.rawStart;
       inner += seg('tl-avoid', w.start, w.end, `Avoid bright light ${fRange(r.tz, w.rawStart, w.rawEnd)}`, k);
-      item(k, w.rawStart, 'avoid', 'Avoid light', fRange(r.tz, w.rawStart, w.rawEnd));
     }
     for (const m of r.melatonin) {
       const k = 'm' + m.at;
       inner += `<span class="tl-mel" style="left:${pct(m.at)}" data-tip="${esc(`Melatonin ${fT(r.tz, m.at)}`)}" data-k="${k}"></span>`;
-      item(k, m.at, 'mel', 'Melatonin', fT(r.tz, m.at));
     }
     for (const m of r.nightMel || []) {
       const k = 'n' + m.start;
       inner += `<span class="tl-mel tl-mel-opt" style="left:${pct(m.start)}" data-tip="${esc(`Melatonin only if awake ${fRange(r.tz, m.start, m.end)}`)}" data-k="${k}"></span>`;
-      item(k, m.start, 'mel', 'Melatonin if awake', fRange(r.tz, m.start, m.end));
     }
     if (ev && ev.eventUtc >= r.visStart && ev.eventUtc < r.visEnd) {
       inner += `<span class="tl-event" style="left:${pct(ev.eventUtc)}" data-tip="${esc(`Your event ${fT(r.tz, ev.eventUtc)}`)}" data-k="ev"></span>`;
       item('ev', ev.eventUtc, 'event', 'Event', fT(r.tz, ev.eventUtc));
     }
     if (!print && now >= r.visStart && now < r.visEnd) inner += `<span class="tl-now" style="left:${pct(now)}" data-tip="${esc(`Now · ${fT(r.tz, now)}`)}"></span>`;
+    const c = cal[ri];
+    const range = (w) => (w.carry ? `until ${fT(r.tz, w.end)}` : fRange(r.tz, w.start, w.end));
+    for (const w of c.sleep) items.push({ k: (w.plane ? 'f' : 's') + w.start, t: w.start, sw: 'sleep', label: w.plane ? 'Plane sleep' : 'Sleep', range: range(w) });
+    for (const w of c.seek) items.push({ k: 'l' + w.start, t: w.start, sw: 'seek', label: 'Seek light', range: range(w) });
+    for (const w of c.avoid) items.push({ k: 'a' + w.start, t: w.start, sw: 'avoid', label: 'Avoid light', range: range(w) });
+    for (const m of c.mel) items.push({ k: 'm' + m.start, t: m.start, sw: 'mel', label: 'Melatonin', range: fT(r.tz, m.start) });
+    for (const m of c.nightMel) items.push({ k: 'n' + m.start, t: m.start, sw: 'mel', label: 'Melatonin if awake', range: fRange(r.tz, m.start, m.end) });
     items.sort((a, b) => a.t - b.t);
     const chips = items.map((it) => `<li data-k="${it.k}"><i class="sw sw-${it.sw}" aria-hidden="true"></i><span class="tl-chip-l">${it.label}</span> <b>${esc(it.range)}</b></li>`).join('');
     html += `<div class="tl-row${r.adjusted && r.kind === 'post' ? ' adjusted' : ''}">
@@ -659,44 +692,47 @@ const shiftNote = (h) => (h ? `${fHours(h)} ${h > 0 ? 'earlier' : 'later'} than 
 // ---- schedule table ---------------------------------------------------------
 function tableHTML(leg, { print = false } = {}) {
   const { rows, collapsed } = visibleRows(leg);
+  const cal = calendarItems(leg, rows);
   const showMel = leg.melatonin.length > 0 || leg.nightMelatonin.length > 0;
   const showCaf = state.plan.input.caffeine;
-  const cols = ['Day', 'Sleep (that night)', 'Bright light', 'Avoid light'];
+  const cols = ['Day', 'Sleep', 'Bright light', 'Avoid light'];
   if (showMel) cols.push('Melatonin');
   if (showCaf) cols.push('Last caffeine');
   const none = '<span class="none">—</span>';
   const cell = (label, html, cls = '') => `<td data-label="${label}"${cls ? ` class="${cls}"` : ''}>${html || none}</td>`;
-  const ranges = (list, tz, kind) => list.filter((w) => w.end - w.start >= 20 * MIN)
-    .map((w) => `<span class="t">${fRange(tz, w.start, w.end)}</span><small>${shortLight(w, tz, kind)}</small>`).join('');
   const ev = leg.leg === 'out' ? state.plan.event : null;
   let body = '';
-  for (const r of rows) {
+  rows.forEach((r, i) => {
     const tz = r.tz;
-    let sleep = r.beds.map((b) => `<span class="t">${fRange(tz, b.at, b.until)}</span>${r.kind === 'prep' && b.shiftH ? `<small>${shiftNote(b.shiftH)}</small>` : ''}`).join('');
-    if (r.kind === 'departure') {
-      // the night of the travel day is spent on the plane
-      const dz = leg.dest.tz;
-      const sameClock = offsetHours(tz, leg.depUtc) === offsetHours(dz, leg.depUtc);
-      sleep += leg.flight.sleeps.map((w) => `<span class="t">${fRange(tz, w.start, w.end)}</span><small>on the plane${sameClock ? '' : ` (${fRange(dz, w.start, w.end)} ${esc(shortName(leg.dest))} time)`}</small>`).join('');
-    }
-    const evNote = ev && ev.eventUtc >= r.ownStart && ev.eventUtc < r.ownEnd ? `<small class="ev">★ Event ${fT(tz, ev.eventUtc)}</small>` : '';
+    const c = cal[i];
+    const range = (w) => (w.carry ? `until ${fT(tz, w.end)}` : fRange(tz, w.start, w.end));
+    const dz = leg.dest.tz;
+    const sameClock = offsetHours(tz, leg.depUtc) === offsetHours(dz, leg.depUtc);
+    const sleep = c.sleep.map((w) => {
+      let note = '';
+      if (w.plane) note = `on the plane${sameClock || tz === dz ? '' : ` (${fRange(dz, w.start, w.end)} ${esc(shortName(leg.dest))} time)`}`;
+      else if (w.shiftH) note = shiftNote(w.shiftH);
+      return `<span class="t">${range(w)}</span>${note ? `<small>${note}</small>` : ''}`;
+    }).join('');
+    const light = (list, kind) => list.map((w) => `<span class="t">${range(w)}</span><small>${shortLight(w, tz, kind)}</small>`).join('');
+    const mel = [...c.mel.map((m) => `<span class="t">${fT(tz, m.start)}</span><small>optional</small>`),
+      ...c.nightMel.map((m) => `<span class="t">${fRange(tz, m.start, m.end)}</span><small>only if awake</small>`)].join('');
+    const evNote = ev && ev.eventUtc >= r.visStart && ev.eventUtc < r.visEnd ? `<small class="ev">★ Event ${fT(tz, ev.eventUtc)}</small>` : '';
     body += `<tr class="k-${r.kind}">
       <th scope="row" data-label="Day"><b>${esc(fDiso(r.date))}</b><small>${esc(kindLabel(r))} · ${esc(shortName(r.place))}</small>${evNote}</th>
-      ${cell('Sleep (that night)', sleep, 'c-sleep')}
-      ${cell('Bright light', ranges(r.own.seek, tz, 'seek'), 'c-seek')}
-      ${cell('Avoid light', ranges(r.own.avoid, tz, 'avoid'), 'c-avoid')}
-      ${showMel ? cell('Melatonin', [...r.own.melatonin.map((m) => `<span class="t">${fT(tz, m.at)}</span><small>optional</small>`), ...r.own.nightMel.map((m) => `<span class="t">${fRange(tz, m.start, m.end)}</span><small>only if awake</small>`)].join(''), 'c-mel') : ''}
-      ${showCaf ? cell('Last caffeine', r.caffeine.map((c) => `<span class="t">${fT(tz, c.at)}</span>`).join('')) : ''}
+      ${cell('Sleep', sleep, 'c-sleep')}
+      ${cell('Bright light', light(c.seek, 'seek'), 'c-seek')}
+      ${cell('Avoid light', light(c.avoid, 'avoid'), 'c-avoid')}
+      ${showMel ? cell('Melatonin', mel, 'c-mel') : ''}
+      ${showCaf ? cell('Last caffeine', c.caf.map((x) => `<span class="t">${fT(tz, x.start)}</span>`).join('')) : ''}
     </tr>`;
     if (r.kind === 'departure') {
       const f = leg.flight;
-      const dz = leg.dest.tz;
       const bits = [`<b>${fT(leg.origin.tz, f.start)}</b> ${esc(shortName(leg.origin))} → <b>${fT(dz, f.end)}</b> ${esc(shortName(leg.dest))}${daysBetweenISO(localDateISO(leg.origin.tz, f.start), localDateISO(dz, f.end)) ? ` (${esc(fD(dz, f.end))})` : ''}`,
-        `switch to ${esc(shortName(leg.dest))} time`];
-      bits.push('water, little alcohol');
+        `switch to ${esc(shortName(leg.dest))} time`, 'water, little alcohol'];
       body += `<tr class="flight-row"><td colspan="${cols.length}"><span class="fr-ic">${icon('plane')}</span><span><b>Flight</b> · ${bits.join(' · ')}</span></td></tr>`;
     }
-  }
+  });
   if (collapsed.length) {
     const a = collapsed[0]; const b = collapsed[collapsed.length - 1];
     const last = [...rows].reverse().find((r) => r.beds.length);
