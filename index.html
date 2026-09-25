@@ -232,7 +232,7 @@
 
         <fieldset class="group">
           <legend>Include</legend>
-          <label class="switch"><input type="checkbox" id="opt-mel" checked><span class="track" aria-hidden="true"></span><span>Melatonin timing <small>(0.5–3 mg; ask your doctor first)</small></span></label>
+          <label class="switch"><input type="checkbox" id="opt-mel" checked><span class="track" aria-hidden="true"></span><span>Melatonin timing <small>(eastward trips of 5+ time zones; ask your doctor first)</small></span></label>
           <label class="switch"><input type="checkbox" id="opt-caf" checked><span class="track" aria-hidden="true"></span><span>Caffeine guidance</span></label>
         </fieldset>
 
@@ -254,16 +254,19 @@
     <section id="results" class="results" hidden aria-labelledby="results-title">
       <div class="wrap">
         <div class="results-head">
-          <div>
+          <div class="results-title">
             <p class="eyebrow" id="results-eyebrow">Your plan</p>
             <h2 id="results-title">Your plan</h2>
+            <p class="results-links">
+              <button type="button" class="link-btn" id="edit-btn">Edit trip</button>
+              <span aria-hidden="true">·</span>
+              <button type="button" class="link-btn" id="reset-btn">Start a new plan</button>
+            </p>
           </div>
-          <div class="results-actions">
+          <div class="results-actions" role="toolbar" aria-label="Save or share this plan">
+            <button type="button" class="btn btn-primary" id="print-btn"><svg class="ic"><use href="#i-print"/></svg> Print summary</button>
             <button type="button" class="btn btn-soft" id="ics-btn"><svg class="ic"><use href="#i-cal"/></svg> Add to calendar</button>
             <button type="button" class="btn btn-soft" id="share-btn"><svg class="ic"><use href="#i-link"/></svg> <span>Copy link</span></button>
-            <button type="button" class="btn btn-soft" id="print-btn"><svg class="ic"><use href="#i-print"/></svg> Print summary</button>
-            <button type="button" class="btn btn-soft" id="edit-btn">Edit trip</button>
-            <button type="button" class="btn btn-soft" id="reset-btn">New plan</button>
           </div>
         </div>
 
@@ -283,9 +286,12 @@
               <h3 id="schedule-title" class="card-title-sm">Schedule</h3>
               <p class="card-sub" id="schedule-sub">Local times: home clock until you fly, destination clock after you land.</p>
             </div>
-            <div class="seg seg-sm" role="radiogroup" aria-label="Schedule view">
-              <label><input type="radio" name="view" value="table" checked><span>Table</span></label>
-              <label><input type="radio" name="view" value="timeline"><span>Timeline</span></label>
+            <div class="schedule-tools">
+              <div class="seg seg-sm" role="radiogroup" aria-label="Schedule view">
+                <label><input type="radio" name="view" value="table" checked><span>Table</span></label>
+                <label><input type="radio" name="view" value="timeline"><span>Timeline</span></label>
+              </div>
+              <button type="button" class="btn btn-soft btn-sm" id="print-btn-2" title="Print a summary with this view"><svg class="ic"><use href="#i-print"/></svg> Print</button>
             </div>
           </div>
           <ul class="legend-inline" id="schedule-legend">
@@ -297,7 +303,6 @@
             <li><i class="sw sw-day"></i>Daylight</li>
           </ul>
           <div id="schedule"></div>
-          <p class="print-hint"><svg class="ic"><use href="#i-print"/></svg> "Print summary" prints the view shown here.</p>
         </section>
 
         <div class="two-col">

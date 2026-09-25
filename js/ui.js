@@ -34,7 +34,8 @@ function fmt(tz, opts) {
   }
   return f;
 }
-const fT = (tz, t) => fmt(tz, { hour: prefs.clock24 ? '2-digit' : 'numeric', minute: '2-digit' }).format(new Date(t)).replace(/\s?([AP]M)/, (m, p) => ' ' + p.toLowerCase());
+const fTime = (tz, t) => fmt(tz, { hour: prefs.clock24 ? '2-digit' : 'numeric', minute: '2-digit' }).format(new Date(t)).replace(/\s?([AP]M)/, (m, p) => ' ' + p.toLowerCase());
+const fT = fTime;
 const fD = (tz, t) => fmt(tz, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(t));
 const fDiso = (iso) => fD('UTC', Date.parse(iso + 'T12:00:00Z'));
 const fRange = (tz, a, b) => `${fT(tz, a)}–${fT(tz, b)}`;
@@ -679,6 +680,8 @@ const shiftNote = (h) => (h ? `${fHours(h)} ${h > 0 ? 'earlier' : 'later'} than 
 // The table reads like a day, left to right: wake-up, light, caffeine, melatonin, then that night's
 // bedtime. Each row covers wake-up to bedtime (so an after-midnight bedtime stays on its evening's row).
 function tableHTML(leg, { print = false } = {}) {
+  const fT = (tz, x) => fTime(tz, x).replace(/ /g, '\u00a0');
+  const fRange = (tz, x, y) => `${fT(tz, x)}–<wbr>${fT(tz, y)}`;
   const { rows, collapsed } = visibleRows(leg);
   const showMel = leg.melatonin.length > 0;
   const showCaf = state.plan.input.caffeine;
@@ -1147,7 +1150,7 @@ function init() {
   setupTooltip();
   applyThemeLabel();
 
-  $('#swap-btn').addEventListener('click', () => {
+  $('#swap-btn')?.addEventListener('click', () => {
     const a = state.from; const b = state.to;
     if (b) setPlace('from', b); else { state.from = null; els.fromInput.value = ''; }
     if (a) setPlace('to', a); else { state.to = null; els.toInput.value = ''; }
@@ -1157,20 +1160,20 @@ function init() {
   els.form.addEventListener('input', (e) => { if (!e.target.closest('.combo')) updatePreview(); });
   els.form.addEventListener('change', (e) => { if (e.target.name === 'prep') updatePreview(); });
   els.form.addEventListener('submit', (e) => { e.preventDefault(); build(); });
-  $('#example-btn').addEventListener('click', fillExample);
-  $('#share-btn').addEventListener('click', share);
-  $('#ics-btn').addEventListener('click', downloadIcs);
-  $('#print-btn').addEventListener('click', () => { fillPrintSheet(); window.print(); });
-  $('#reset-btn').addEventListener('click', () => {
+  $('#example-btn')?.addEventListener('click', fillExample);
+  $('#share-btn')?.addEventListener('click', share);
+  $('#ics-btn')?.addEventListener('click', downloadIcs);
+  ['#print-btn', '#print-btn-2'].forEach((id) => $(id)?.addEventListener('click', () => { fillPrintSheet(); window.print(); }));
+  $('#reset-btn')?.addEventListener('click', () => {
     resetPlan();
     $('#planner').scrollIntoView({ behavior: 'smooth', block: 'start' });
     toast('Cleared. Start a new plan.');
   });
-  $('#edit-btn').addEventListener('click', () => {
+  $('#edit-btn')?.addEventListener('click', () => {
     $('#planner').scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(() => els.depDate.focus({ preventScroll: true }), 400);
   });
-  $('.brand').addEventListener('click', (e) => {
+  $('.brand')?.addEventListener('click', (e) => {
     e.preventDefault();
     if (state.plan || location.search) resetPlan();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1178,27 +1181,27 @@ function init() {
   addEventListener('beforeprint', fillPrintSheet);
   // hovering a time in the list highlights its block on the bar (and vice versa)
   const hl = (k, on) => $$(`#schedule [data-k="${k}"]`).forEach((n) => n.classList.toggle('hl', on));
-  $('#schedule').addEventListener('pointerover', (e) => { const n = e.target.closest('[data-k]'); if (n) hl(n.dataset.k, true); });
-  $('#schedule').addEventListener('pointerout', (e) => { const n = e.target.closest('[data-k]'); if (n) hl(n.dataset.k, false); });
+  $('#schedule')?.addEventListener('pointerover', (e) => { const n = e.target.closest('[data-k]'); if (n) hl(n.dataset.k, true); });
+  $('#schedule')?.addEventListener('pointerout', (e) => { const n = e.target.closest('[data-k]'); if (n) hl(n.dataset.k, false); });
   $$('input[name="view"]').forEach((r) => r.addEventListener('change', () => {
     store.set('meridian-view', r.value);
     if (state.plan) renderSchedule(currentLeg());
   }));
-  $('#expand-all').addEventListener('click', () => {
+  $('#expand-all')?.addEventListener('click', () => {
     const cards = $$('#days details.day');
     const open = !cards.every((d) => d.open);
     cards.forEach((d) => { d.open = open; });
     syncExpandLabel();
   });
-  $('#days').addEventListener('toggle', syncExpandLabel, true);
-  $('#leg-tabs').addEventListener('click', (e) => {
+  $('#days')?.addEventListener('toggle', syncExpandLabel, true);
+  $('#leg-tabs')?.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-leg]');
     if (!b) return;
     state.leg = b.dataset.leg;
     $$('#leg-tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
     renderLeg();
   });
-  $('#days').addEventListener('change', (e) => {
+  $('#days')?.addEventListener('change', (e) => {
     const cb = e.target.closest('.act-check');
     if (!cb) return;
     const done = store.get('meridian-done', {});
@@ -1206,14 +1209,14 @@ function init() {
     store.set('meridian-done', done);
     cb.closest('.act').classList.toggle('done', cb.checked);
   });
-  $('#theme-toggle').addEventListener('click', () => {
+  $('#theme-toggle')?.addEventListener('click', () => {
     const root = document.documentElement;
     const cur = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     const next = cur === 'dark' ? 'light' : 'dark';
     root.dataset.theme = next;
     try { localStorage.setItem('meridian-theme', next); } catch { /* ignore */ }
   });
-  $('#clock-toggle').addEventListener('click', () => {
+  $('#clock-toggle')?.addEventListener('click', () => {
     prefs.clock24 = !prefs.clock24;
     store.set('meridian-clock24', prefs.clock24);
     fmtCache.clear();
