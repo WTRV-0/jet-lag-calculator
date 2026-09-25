@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Meridian · Jet Lag Planner</title>
+  <meta name="description" content="A free, personalised jet lag plan: when to sleep, seek or avoid light, take melatonin and drink coffee — from the days before you fly until your body clock catches up.">
+  <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e1424" media="(prefers-color-scheme: dark)">
+  <meta property="og:title" content="Meridian · Jet Lag Planner">
+  <meta property="og:description" content="Personalised light, sleep, melatonin and caffeine timing for any trip.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    // apply saved theme before paint
+    try { const t = localStorage.getItem('meridian-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <script type="module" src="js/ui.js"></script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+      <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="2"/></symbol>
+      <symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M12 10v3l2 2M5 4 3 6M19 4l2 2"/></symbol>
+      <symbol id="i-shades" viewBox="0 0 24 24"><path d="M2 10h20M4 10l1.5 6a2 2 0 0 0 2 1.5h1A2 2 0 0 0 10.4 16l.6-3h2l.6 3a2 2 0 0 0 1.9 1.5h1a2 2 0 0 0 2-1.5L20 10"/></symbol>
+      <symbol id="i-pill" viewBox="0 0 24 24"><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-35 12 12)"/><path d="m9.2 8 5.6 8"/></symbol>
+      <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v2M12 3v2"/></symbol>
+      <symbol id="i-plane" viewBox="0 0 24 24"><path d="M10.5 13.5 3 11l1.5-1.5 7.5.5 4-4.5c1-1 2.8-1.3 3.3-.8s.2 2.3-.8 3.3l-4.5 4 .5 7.5L13 21l-2.5-7.5z"/></symbol>
+      <symbol id="i-land" viewBox="0 0 24 24"><path d="M3 20h18M5.5 11.5l12 3.5c1.2.3 2.4-.2 2.5-1s-.8-1.6-2-2L13 10.5 9.5 4 8 3.6l1.5 6.3-4.5-1.2L4 6.5 2.8 6.2l.7 4.6z"/></symbol>
+      <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4" r="2"/><path d="m9 21 2.5-6.5L14 17v4M7 12l3-5 4 1 2 4 3 1M11.5 14.5 10 8"/></symbol>
+      <symbol id="i-meal" viewBox="0 0 24 24"><path d="M5 3v8a2 2 0 0 0 2 2v8M9 3v8a2 2 0 0 1-2 2M7 3v6M17 21V3c-2 1-3 4-3 7s1 3 3 3"/></symbol>
+      <symbol id="i-water" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+      <symbol id="i-nap" viewBox="0 0 24 24"><path d="M4 18h16M6 18v-4h12v4M14 4h4l-4 5h4M9 8h3l-3 3.5h3"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6-4.5-4.1 6-.7z"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+      <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
+      <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+      <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v7h-3M7 14h10v7H7z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7M5 10v10h14V10"/></symbol>
+    </defs>
+  </svg>
+
+  <a class="skip" href="#planner">Skip to the planner</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./" aria-label="Meridian home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" class="bm-ring"/><path d="M4 18a12 12 0 0 1 24 0" class="bm-arc"/><circle cx="23.5" cy="10.5" r="3" class="bm-sun"/></svg>
+        <span class="brand-name">Meridian</span>
+        <span class="brand-tag">jet lag planner</span>
+      </a>
+      <nav class="site-nav" aria-label="Sections">
+        <a href="#planner">Planner</a>
+        <a href="#science">How it works</a>
+        <a href="#protocol">Protocol</a>
+      </nav>
+      <div class="header-tools">
+        <button class="icon-btn" id="clock-toggle" type="button" aria-label="Switch between 12- and 24-hour time" title="12h / 24h"><span id="clock-label">24h</span></button>
+        <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Light / dark"><svg class="ic"><use href="#i-contrast"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow">Science-based · Free · No sign-up</p>
+        <h1>Land on local time.</h1>
+        <p class="lead">A personal jet lag plan that tells you exactly when to sleep, when to find bright light and when to hide from it — plus melatonin and caffeine timing. It starts a few days before you fly and runs until your body clock catches up.</p>
+        <ul class="hero-points">
+          <li><svg class="ic"><use href="#i-sun"/></svg> Light windows checked against real sunrise &amp; sunset</li>
+          <li><svg class="ic"><use href="#i-plane"/></svg> In-flight sleep plan</li>
+          <li><svg class="ic"><use href="#i-star"/></svg> Be sharp for a meeting, race or wedding</li>
+          <li><svg class="ic"><use href="#i-home"/></svg> Return-trip plan included</li>
+        </ul>
+      </div>
+      <figure class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 400 220" class="hero-svg">
+          <defs>
+            <linearGradient id="sky" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0" class="sky-a"/><stop offset=".5" class="sky-b"/><stop offset="1" class="sky-c"/>
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="400" height="220" rx="18" fill="url(#sky)"/>
+          <g class="hero-grid">
+            <line x1="50" y1="18" x2="50" y2="202"/><line x1="100" y1="18" x2="100" y2="202"/><line x1="150" y1="18" x2="150" y2="202"/>
+            <line x1="200" y1="18" x2="200" y2="202"/><line x1="250" y1="18" x2="250" y2="202"/><line x1="300" y1="18" x2="300" y2="202"/><line x1="350" y1="18" x2="350" y2="202"/>
+          </g>
+          <path d="M20 170 C 110 30, 290 30, 380 170" class="hero-path"/>
+          <circle cx="92" cy="92" r="16" class="hero-sun"/>
+          <path d="M318 78a18 18 0 1 0 14 26 14 14 0 1 1-14-26z" class="hero-moon"/>
+          <g transform="translate(196 44) rotate(8)" class="hero-plane"><path d="M-14 3 -2 2 6-7c2-2 5-2.5 6-1.5s.5 4-1.5 6L2 5l1 12-3 2-4-11-10 .5-2 3-3-1 1.5-5-1.5-4.5 3-1z"/></g>
+        </svg>
+      </figure>
+    </div>
+  </section>
+
+  <main>
+    <section id="planner" class="wrap planner" aria-labelledby="planner-title">
+      <form id="trip-form" class="card form-card" novalidate>
+        <h2 id="planner-title" class="card-title">Plan your trip</h2>
+
+        <fieldset class="group">
+          <legend>Route</legend>
+          <div class="route-row">
+            <div class="field combo" data-combo="from">
+              <label for="from-input">Home (flying from)</label>
+              <input id="from-input" type="text" autocomplete="off" spellcheck="false" placeholder="City or airport code" role="combobox" aria-expanded="false" aria-controls="from-list" aria-autocomplete="list">
+              <ul id="from-list" class="combo-list" role="listbox" hidden></ul>
+            </div>
+            <button type="button" class="icon-btn swap-btn" id="swap-btn" aria-label="Swap origin and destination" title="Swap"><svg class="ic"><use href="#i-swap"/></svg></button>
+            <div class="field combo" data-combo="to">
+              <label for="to-input">Destination</label>
+              <input id="to-input" type="text" autocomplete="off" spellcheck="false" placeholder="City or airport code" role="combobox" aria-expanded="false" aria-controls="to-list" aria-autocomplete="list">
+              <ul id="to-list" class="combo-list" role="listbox" hidden></ul>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Outbound flight</legend>
+          <div class="grid-2">
+            <div class="field">
+              <label for="dep-date">Departure date</label>
+              <input id="dep-date" type="date" required>
+            </div>
+            <div class="field">
+              <label for="dep-time">Departure time <span class="hint" data-hint="from">local</span></label>
+              <input id="dep-time" type="time" required value="18:00">
+            </div>
+          </div>
+          <div class="seg" role="radiogroup" aria-label="How to enter the arrival">
+            <label><input type="radio" name="arr-mode" value="arrival" checked><span>Arrival time</span></label>
+            <label><input type="radio" name="arr-mode" value="duration"><span>Flight length</span></label>
+          </div>
+          <div class="grid-2" id="arr-fields">
+            <div class="field">
+              <label for="arr-date">Arrival date</label>
+              <input id="arr-date" type="date">
+            </div>
+            <div class="field">
+              <label for="arr-time">Arrival time <span class="hint" data-hint="to">local</span></label>
+              <input id="arr-time" type="time">
+            </div>
+          </div>
+          <div class="grid-2" id="dur-fields" hidden>
+            <div class="field">
+              <label for="dur-h">Hours</label>
+              <input id="dur-h" type="number" min="0" max="40" inputmode="numeric" value="8">
+            </div>
+            <div class="field">
+              <label for="dur-m">Minutes</label>
+              <input id="dur-m" type="number" min="0" max="59" step="5" inputmode="numeric" value="0">
+            </div>
+          </div>
+          <p class="field-note" id="flight-note" aria-live="polite"></p>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Your usual sleep <span class="legend-hint">at home, on a normal night</span></legend>
+          <div class="grid-2">
+            <div class="field">
+              <label for="bed">Bedtime</label>
+              <input id="bed" type="time" value="23:00" required>
+            </div>
+            <div class="field">
+              <label for="wake">Wake time</label>
+              <input id="wake" type="time" value="07:00" required>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Coming back? <span class="legend-hint">optional — improves the strategy and adds a return plan</span></legend>
+          <div class="grid-2">
+            <div class="field">
+              <label for="ret-date">Return date</label>
+              <input id="ret-date" type="date">
+            </div>
+            <div class="field">
+              <label for="ret-time">Return departure <span class="hint" data-hint="to">local</span></label>
+              <input id="ret-time" type="time" value="12:00">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Days to prepare before you fly</legend>
+          <div class="seg seg-4" role="radiogroup" aria-label="Preparation days">
+            <label><input type="radio" name="prep" value="0"><span>None</span></label>
+            <label><input type="radio" name="prep" value="1"><span>1 day</span></label>
+            <label><input type="radio" name="prep" value="2"><span>2 days</span></label>
+            <label><input type="radio" name="prep" value="3" checked><span>3 days</span></label>
+          </div>
+          <p class="field-note">Each prep day moves your sleep about an hour toward the destination.</p>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Your goal</legend>
+          <div class="goal-grid" role="radiogroup">
+            <label class="goal"><input type="radio" name="goal" value="auto" checked><span><strong>Let the planner decide</strong><small>Picks the best strategy from how long you're staying</small></span></label>
+            <label class="goal"><input type="radio" name="goal" value="adjust"><span><strong>Fully adjust</strong><small>Get onto local time as fast as possible</small></span></label>
+            <label class="goal"><input type="radio" name="goal" value="home"><span><strong>Stay on home time</strong><small>Best for very short trips</small></span></label>
+            <label class="goal"><input type="radio" name="goal" value="partial"><span><strong>Meet halfway</strong><small>Shift about half the gap for a few-day stay</small></span></label>
+            <label class="goal"><input type="radio" name="goal" value="event"><span><strong>Be sharp for an event</strong><small>A meeting, race or ceremony at a set time</small></span></label>
+          </div>
+          <div class="grid-2" id="event-fields" hidden>
+            <div class="field">
+              <label for="ev-date">Event date</label>
+              <input id="ev-date" type="date">
+            </div>
+            <div class="field">
+              <label for="ev-time">Event time <span class="hint" data-hint="to">local</span></label>
+              <input id="ev-time" type="time" value="09:00">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Include</legend>
+          <label class="switch"><input type="checkbox" id="opt-mel" checked><span class="track" aria-hidden="true"></span><span>Melatonin timing <small>(0.5–3 mg; ask your doctor first)</small></span></label>
+          <label class="switch"><input type="checkbox" id="opt-caf" checked><span class="track" aria-hidden="true"></span><span>Caffeine guidance</span></label>
+        </fieldset>
+
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="build-btn">Build my plan <svg class="ic"><use href="#i-arrow"/></svg></button>
+          <button type="button" class="btn btn-ghost" id="example-btn">Try an example</button>
+        </div>
+      </form>
+
+      <aside class="card preview-card" id="preview" aria-live="polite">
+        <div class="preview-empty">
+          <svg class="ic ic-lg"><use href="#i-clock"/></svg>
+          <p>Pick where you're flying from and to. The time gap, direction and both local clocks show up here as you type.</p>
+        </div>
+      </aside>
+    </section>
+
+    <section id="results" class="results" hidden aria-labelledby="results-title">
+      <div class="wrap">
+        <div class="results-head">
+          <div>
+            <p class="eyebrow" id="results-eyebrow">Your plan</p>
+            <h2 id="results-title">Your plan</h2>
+          </div>
+          <div class="results-actions">
+            <button type="button" class="btn btn-soft" id="ics-btn"><svg class="ic"><use href="#i-cal"/></svg> Add to calendar</button>
+            <button type="button" class="btn btn-soft" id="share-btn"><svg class="ic"><use href="#i-link"/></svg> <span>Copy link</span></button>
+            <button type="button" class="btn btn-soft" id="print-btn"><svg class="ic"><use href="#i-print"/></svg> Print</button>
+          </div>
+        </div>
+
+        <div class="stats" id="stats"></div>
+        <div id="strategy-box"></div>
+        <div id="now-box"></div>
+        <div id="event-box"></div>
+
+        <div class="leg-tabs" id="leg-tabs" role="tablist" hidden>
+          <button type="button" role="tab" aria-selected="true" data-leg="out">Outbound</button>
+          <button type="button" role="tab" aria-selected="false" data-leg="return">Return home</button>
+        </div>
+
+        <div class="two-col">
+          <section class="card chart-card" aria-labelledby="progress-title">
+            <h3 id="progress-title" class="card-title-sm">Body-clock shift, day by day</h3>
+            <p class="card-sub" id="progress-sub"></p>
+            <div id="progress-chart" class="progress-chart"></div>
+          </section>
+          <section class="card legend-card" aria-labelledby="legend-title">
+            <h3 id="legend-title" class="card-title-sm">Reading the timeline</h3>
+            <ul class="legend">
+              <li><i class="sw sw-sleep"></i><span><b>Sleep</b> — your recommended sleep window</span></li>
+              <li><i class="sw sw-seek"></i><span><b>Seek light</b> — daylight, or a light box if it's dark out</span></li>
+              <li><i class="sw sw-avoid"></i><span><b>Avoid light</b> — dim lights, sunglasses outside</span></li>
+              <li><i class="sw sw-flight"></i><span><b>In flight</b></span></li>
+              <li><i class="sw sw-mel"></i><span><b>Melatonin</b></span></li>
+              <li><i class="sw sw-day"></i><span><b>Daylight</b> at your location</span></li>
+            </ul>
+          </section>
+        </div>
+
+        <section class="card timeline-card" aria-labelledby="timeline-title">
+          <div class="timeline-head">
+            <h3 id="timeline-title" class="card-title-sm">Timeline</h3>
+            <p class="card-sub">Each row runs midnight to midnight on the clock you're living by that day.</p>
+          </div>
+          <div id="timeline" class="timeline"></div>
+        </section>
+
+        <h3 class="section-sub">Day by day</h3>
+        <div id="days" class="days"></div>
+
+        <p class="disclaimer-inline"><svg class="ic"><use href="#i-info"/></svg> This is general guidance, not medical advice. Check with your doctor before using melatonin, especially if you're pregnant, take other medicines, or have a sleep disorder.</p>
+      </div>
+    </section>
+
+    <section id="science" class="wrap prose-section" aria-labelledby="science-title">
+      <p class="eyebrow">How it works</p>
+      <h2 id="science-title">Your body clock moves slowly. Light moves it.</h2>
+      <div class="science-grid">
+        <div class="card sci-card">
+          <h3>1 · 60–120 minutes a day</h3>
+          <p>Your circadian rhythm can only shift about one to two hours per day. Seven time zones can take up to a week to adjust to, and another week to adjust back. Moving <em>later</em> (westward) is easier than moving <em>earlier</em> (eastward), so the planner uses about 1.5 hours a day for delays and 1 hour a day for advances.</p>
+        </div>
+        <div class="card sci-card">
+          <h3>2 · Timing is everything</h3>
+          <p>Your body temperature bottoms out about 3 hours before your usual wake time. Bright light in the hours <strong>after</strong> that low point moves your clock <strong>earlier</strong>. Light in the hours <strong>before</strong> it moves your clock <strong>later</strong>. Get it the wrong way round and you adjust in the wrong direction.</p>
+          <figure class="prc" aria-label="Diagram: light before the body's temperature low point shifts the clock later; light after it shifts the clock earlier.">
+            <svg viewBox="0 0 320 120" role="img">
+              <title>Light before the temperature low point delays the clock; light after it advances the clock</title>
+              <rect x="20" y="20" width="130" height="64" rx="8" class="prc-delay"/>
+              <rect x="170" y="20" width="130" height="64" rx="8" class="prc-adv"/>
+              <line x1="160" y1="12" x2="160" y2="92" class="prc-axis"/>
+              <text x="85" y="48" class="prc-t">Light here</text>
+              <text x="85" y="66" class="prc-t strong">→ clock later</text>
+              <text x="235" y="48" class="prc-t">Light here</text>
+              <text x="235" y="66" class="prc-t strong">→ clock earlier</text>
+              <text x="160" y="110" class="prc-l">body temperature low (≈ wake − 3 h)</text>
+            </svg>
+          </figure>
+        </div>
+        <div class="card sci-card">
+          <h3>3 · Sometimes the long way round wins</h3>
+          <p>Eastbound usually means morning light. But once you cross about 9 or more zones eastward, it's often faster to push your clock <em>later</em> all the way round. For Chicago → Tokyo, for example, the plan recommends <strong>evening</strong> light and avoiding <strong>morning</strong> light, which is the opposite of the usual eastbound rule. The planner works out which way is faster for your trip.</p>
+        </div>
+        <div class="card sci-card">
+          <h3>4 · Short trips: don't bother</h3>
+          <p>For stays under about 2–3 days across many zones, keeping your home schedule (or as close as you can) usually beats half-adjusting and then adjusting back. For stays of a few days, "meet halfway" splits the difference.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="protocol" class="wrap prose-section" aria-labelledby="protocol-title">
+      <p class="eyebrow">The protocol</p>
+      <h2 id="protocol-title">Four steps, in plain language</h2>
+      <ol class="steps">
+        <li class="card step">
+          <span class="step-n">1</span>
+          <h3>Plan ahead <small>2–3 days before</small></h3>
+          <ul>
+            <li>Shift bedtime and wake time about <strong>1 hour a day</strong> toward your destination.</li>
+            <li><strong>Eastbound:</strong> bed and wake 1 hour earlier each day.</li>
+            <li><strong>Westbound:</strong> bed and wake 1 hour later each day.</li>
+            <li>Short trip (under ~2 days) across many zones? Stay on your home schedule.</li>
+          </ul>
+        </li>
+        <li class="card step">
+          <span class="step-n">2</span>
+          <h3>Travel smart</h3>
+          <p class="step-sub">During the flight</p>
+          <ul>
+            <li>Set your watch to destination time as soon as you board.</li>
+            <li>Eat and sleep on destination time.</li>
+            <li>Drink water. Go easy on alcohol and caffeine; both disrupt sleep.</li>
+          </ul>
+          <p class="step-sub">After you land</p>
+          <ul>
+            <li>Get outside for natural light (see step 3 for timing).</li>
+            <li>Keep naps to 20–30 minutes.</li>
+            <li>Stay awake until your new local bedtime.</li>
+            <li>Move your body during local daytime.</li>
+          </ul>
+        </li>
+        <li class="card step">
+          <span class="step-n">3</span>
+          <h3>Time your light</h3>
+          <ul>
+            <li><strong>Flying east</strong> (e.g. US → Europe): bright light in the <strong>morning</strong>; avoid it in the evening.</li>
+            <li><strong>Flying west</strong> (e.g. Europe → US): bright light in the <strong>evening</strong>; avoid it in the morning.</li>
+            <li><strong>8+ zones:</strong> the rule can flip. Your plan above gives exact windows.</li>
+          </ul>
+        </li>
+        <li class="card step">
+          <span class="step-n">4</span>
+          <h3>Melatonin <small>optional; talk to your doctor</small></h3>
+          <ul>
+            <li>Low dose, <strong>0.5–3 mg</strong>, taken <strong>30–60 minutes before</strong> your destination bedtime.</li>
+            <li>It may help you adjust faster, especially when flying east.</li>
+            <li>Melatonin is sold as a supplement and isn't FDA-regulated, so what's in the bottle can differ from the label.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <section id="faq" class="wrap prose-section" aria-labelledby="faq-title">
+      <p class="eyebrow">Questions</p>
+      <h2 id="faq-title">Good to know</h2>
+      <div class="faq">
+        <details><summary>What counts as "bright light"?</summary><p>Outdoor daylight is best. Even an overcast day is many times brighter than indoor lighting. If a light window falls before sunrise or after sunset, a 10,000-lux light box or the brightest indoor light you can find is the next best thing. The plan tells you when that's the case.</p></details>
+        <details><summary>How do I "avoid" light?</summary><p>Stay indoors with dim, warm lighting. Outside, wear dark sunglasses, and turn down screen brightness. On the plane, use the window shade and an eye mask.</p></details>
+        <details><summary>Why doesn't westbound get melatonin reminders?</summary><p>Evening melatonin nudges the clock <em>earlier</em>, which works against a westward (later) shift. For westbound or "long way round" plans, the planner skips daily reminders. If you wake too early and can't get back to sleep, ask your doctor whether a small dose makes sense for you.</p></details>
+        <details><summary>Is my data stored anywhere?</summary><p>No. Everything is calculated in your browser. Your last trip is remembered on this device only, and the share link holds your trip details in the URL itself.</p></details>
+        <details><summary>Does it work offline?</summary><p>Yes. After your first visit the planner is cached, so you can open your plan on the plane. On a phone, use "Add to Home Screen" to install it like an app.</p></details>
+        <details><summary>How accurate is this?</summary><p>It uses well-established rules about how light shifts the body clock, with sensible average rates. People vary, so treat the times as a guide and not to the minute. If you feel you're adjusting faster or slower, trust your body.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p><strong>Meridian</strong> — a free jet lag planner. Calculations run entirely in your browser.</p>
+      <p class="muted">For general information only, not medical advice. Melatonin is a dietary supplement and not FDA-regulated.</p>
+    </div>
+  </footer>
+
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="wrap">Meridian needs JavaScript to calculate your plan.</p></noscript>
+</body>
+</html>
