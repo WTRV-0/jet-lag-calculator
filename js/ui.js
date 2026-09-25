@@ -676,7 +676,7 @@ function tableHTML(leg, { print = false } = {}) {
     const evNote = ev && ev.eventUtc >= r.ownStart && ev.eventUtc < r.ownEnd ? `<small class="ev">★ Event ${fT(tz, ev.eventUtc)}</small>` : '';
     body += `<tr class="k-${r.kind}">
       <th scope="row" data-label="Day"><b>${esc(fDiso(r.date))}</b><small>${esc(kindLabel(r))} · ${esc(shortName(r.place))}</small>${evNote}</th>
-      ${cell('Sleep', sleep || (r.kind === 'departure' ? '<small>on the plane</small>' : ''), 'c-sleep')}
+      ${cell('Sleep', sleep, 'c-sleep')}
       ${cell('Bright light', ranges(r.own.seek, tz, 'seek'), 'c-seek')}
       ${cell('Avoid light', ranges(r.own.avoid, tz, 'avoid'), 'c-avoid')}
       ${showMel ? cell('Melatonin', [...r.own.melatonin.map((m) => `<span class="t">${fT(tz, m.at)}</span><small>optional</small>`), ...r.own.nightMel.map((m) => `<span class="t">${fRange(tz, m.start, m.end)}</span><small>only if awake</small>`)].join(''), 'c-mel') : ''}
@@ -687,10 +687,10 @@ function tableHTML(leg, { print = false } = {}) {
       const dz = leg.dest.tz;
       const bits = [`<b>${fT(leg.origin.tz, f.start)}</b> ${esc(shortName(leg.origin))} → <b>${fT(dz, f.end)}</b> ${esc(shortName(leg.dest))}${daysBetweenISO(localDateISO(leg.origin.tz, f.start), localDateISO(dz, f.end)) ? ` (${esc(fD(dz, f.end))})` : ''}`,
         `switch to ${esc(shortName(leg.dest))} time`];
-      if (f.sleeps.length) bits.push(`sleep ${f.sleeps.map((w) => fRange(dz, w.start, w.end)).join(', ')}`);
-      else bits.push('stay awake');
+      if (f.sleeps.length) bits.push(`sleep on board <b>${f.sleeps.map((w) => fRange(dz, w.start, w.end)).join(', ')}</b> ${esc(shortName(leg.dest))} time`);
+      else bits.push('stay awake on board');
       bits.push('water, little alcohol');
-      body += `<tr class="flight-row"><td colspan="${cols.length}"><span class="fr-ic">${icon('plane')}</span><span><b>Flight</b> · ${bits.join(' · ')}${f.sleeps.length ? ` <small>(${esc(shortName(leg.dest))} time)</small>` : ''}</span></td></tr>`;
+      body += `<tr class="flight-row"><td colspan="${cols.length}"><span class="fr-ic">${icon('plane')}</span><span><b>Flight</b> · ${bits.join(' · ')}</span></td></tr>`;
     }
   }
   if (collapsed.length) {
